@@ -33,3 +33,15 @@ The response contains:
 - `stale`: `true` if the last refresh from LSU failed, so data may be old or incomplete.
 
 For holidays that cover part of a day, `classes_end_at` and `classes_resume_at` give the time classes stop or restart. Summer Break only applies to long session classes, as its `description` says.
+
+## Frontend
+
+A Flutter app that shows the LSU academic calendar: a month view, an agenda of upcoming dates, and a holidays tab that counts down to the next break. Start the backend first, then from the `frontend` folder:
+
+```
+flutter pub get
+flutter run -d chrome
+flutter test
+```
+
+The app calls `http://localhost:8000`, or `http://10.0.2.2:8000` on the Android emulator. To use a different backend, pass `--dart-define=BACKEND_URL=https://your-server`.

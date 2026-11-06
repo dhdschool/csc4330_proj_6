@@ -1,0 +1,111 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:CAMPUSGROUPS
+X-WR-CALNAME:Louisiana State University
+X-PUBLISHED-TTL:PT1H
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260610T211521Z
+CREATED:20260610T210452Z
+SEQUENCE:2
+ORGANIZER;CN="Volunteer LSU":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/VLSU/rsvp_boot?id=2277313#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:VLSU
+CATEGORIES;X-CG-CATEGORY=event_type:Service
+CATEGORIES;X-CG-CATEGORY=event_tags:Service/Volunteering
+DTSTART:20260808T150000Z
+DTEND:20260808T210000Z
+UID:5c8b92926c242df7b8ed113e6170ecb96102026_5:04:52_PM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:RA Service Project
+LOCATION: Sign in to download the location
+URL:https://tigerlink.lsu.edu/rsvp?id=2277313
+DESCRIPTION:LSU & Southern RAs will collaborate by serving together in the Baton Rouge community at various community partners\n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2277313
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260724T175232Z
+CREATED:20260720T162754Z
+SEQUENCE:2
+ORGANIZER;CN="Panhellenic Council":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/PHC/rsvp_boot?id=2277724#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:PHC
+CATEGORIES;X-CG-CATEGORY=event_type:Service
+DTSTART:20260810T130000Z
+DTEND:20260811T000000Z
+UID:78534e3390e784cf7769992cfaedb0187202026_12:27:54_PM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:LSU Panhellenic Recruitment Recruitment Counselor Training 
+LOCATION: Sign in to download the location
+URL:https://tigerlink.lsu.edu/rsvp?id=2277724
+DESCRIPTION:A week designed to prepare Recruitment Counselors to guide Potential New Members through the primary recruitment process.\n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2277724
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260721T173514Z
+CREATED:20260721T173507Z
+SEQUENCE:1
+ORGANIZER;CN="LSU Food Pantry":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/FoodPantry/rsvp_boot?id=2277751#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:FOODPANTRY
+CATEGORIES;X-CG-CATEGORY=event_type:Service
+CATEGORIES;X-CG-CATEGORY=event_tags:Collaboration,Community,Food Pantry,Get Involved at LSU,Service/Volunteering
+DTSTART:20260810T140000Z
+DTEND:20260810T223000Z
+UID:2fb16b33998cdead422ffbdc834b506e7212026_1:35:07_PM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:Pantry Volunteer Shift Sign-Up
+LOCATION: Sign in to download the location
+URL:https://tigerlink.lsu.edu/rsvp?id=2277751
+DESCRIPTION:This event is for registering to volunteer at the LSU Food Pantry. Please register for your preferred shift under this event. Volunteers are expected to attend all registered shifts. \n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2277751
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260803T153038Z
+CREATED:20260730T190600Z
+SEQUENCE:1
+ORGANIZER;CN="Panhellenic Council":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/PHC/rsvp_boot?id=2277931#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:PHC
+CATEGORIES;X-CG-CATEGORY=event_type:Workshop
+DTSTART:20260810T180000Z
+DTEND:20260810T193000Z
+UID:e615b73367ada0591d4fb0f404fafa687302026_3:06:00_PM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:LSU Panhellenic Recruitment Recruitment Counselor Training 
+LOCATION: Sign in to download the location
+URL:https://tigerlink.lsu.edu/rsvp?id=2277931
+DESCRIPTION:LSU Panhellenic Recruitment Recruitment Counselor Training \n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2277931
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260428T150909Z
+CREATED:20260428T150836Z
+SEQUENCE:1
+ORGANIZER;CN="Collegiate Recovery Program at LSU":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/CRC/rsvp_boot?id=2276905#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:CRC
+CATEGORIES;X-CG-CATEGORY=event_type:Social
+CATEGORIES;X-CG-CATEGORY=event_tags:Wellness and Health,Social
+DTSTART:20260810T200000Z
+DTEND:20260810T210000Z
+UID:de839cb572d8895a5fe04cd92e42a5a84282026_11:08:36_AM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:SMART Recovery Meeting 
+LOCATION:167 Coates Hall, Campus Life , 358J LSU Student Union, Baton Rouge, Louisiana 70803, United States
+URL:https://tigerlink.lsu.edu/rsvp?id=2276905
+DESCRIPTION:SMART Recovery is a science-based mutual support program that helps individuals build and maintain motivation for change, cope with urges, manage thoughts and behaviors, and live a balanced life. Grounded in principles of Rational Emotive Behavioral Therapy, SMART Recovery focuses on practical tools and skills rather than labels or lifelong identities. Meetings are discussion-based, empowering participants to take an active role in their recovery using evidence-based strategies.\n\nMeeting Link: https://lsu.zoom.us/j/8295821331\n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2276905
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261106T021456Z
+LAST-MODIFIED:20260724T175232Z
+CREATED:20260721T185346Z
+SEQUENCE:1
+ORGANIZER;CN="Panhellenic Council":mailto:noreply@tigerlink.lsu.edu
+CONTACT:https://tigerlink.lsu.edu/PHC/rsvp_boot?id=2277759#event_host
+CATEGORIES;X-CG-CATEGORY=club_acronym:PHC
+CATEGORIES;X-CG-CATEGORY=event_type:Service
+DTSTART:20260811T130000Z
+DTEND:20260812T000000Z
+UID:f844bb4de718f1894b66e558ec4ee3cc7212026_2:53:46_PM@campusgroups.com
+SUMMARY;ENCODING=QUOTED-PRINTABLE:LSU Panhellenic Recruitment Recruitment Counselor Training 
+LOCATION: Sign in to download the location
+URL:https://tigerlink.lsu.edu/rsvp?id=2277759
+DESCRIPTION:A week designed to prepare Recruitment Counselors to guide Potential New Members through the primary recruitment process.\n---\nEvent Details: https://tigerlink.lsu.edu/rsvp?id=2277759
+END:VEVENT
+END:VCALENDAR

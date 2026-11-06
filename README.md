@@ -34,9 +34,23 @@ The response contains:
 
 For holidays that cover part of a day, `classes_end_at` and `classes_resume_at` give the time classes stop or restart. Summer Break only applies to long session classes, as its `description` says.
 
+### `GET /api/tigerlink/events`
+
+Returns club and organization events from the public [TigerLink](https://tigerlink.lsu.edu/events) (CampusGroups) iCal feed, cached in memory for 1 hour.
+
+| Query parameter | Description |
+| --- | --- |
+| `start`, `end` | Dates as `YYYY-MM-DD`. Returns events overlapping this window. |
+| `club` | A club acronym or name, case-insensitive. |
+| `event_type` | For example `Service` or `Meeting`. |
+| `search` | Matches the event title, case-insensitive. |
+| `limit` | Most events to return (default 500). Events are sorted by start time, so pass `start` to get upcoming ones rather than the earliest. |
+
+Each event has `start`/`end` as UTC timestamps, plus `club`, `event_type`, `tags`, `location` and `url`. A `location` of `null` means TigerLink only shows it to signed-in users. `stale` is `true` if the last refresh failed.
+
 ## Frontend
 
-A Flutter app that shows the LSU academic calendar: a month view, an agenda of upcoming dates, and a holidays tab that counts down to the next break. Start the backend first, then from the `frontend` folder:
+A Flutter app with four tabs: a month view and agenda of the LSU academic calendar, a holidays tab that counts down to the next break, and a Clubs tab listing upcoming TigerLink events with search and type filters. Start the backend first, then from the `frontend` folder:
 
 ```
 flutter pub get
@@ -45,3 +59,10 @@ flutter test
 ```
 
 The app calls `http://localhost:8000`, or `http://10.0.2.2:8000` on the Android emulator. To use a different backend, pass `--dart-define=BACKEND_URL=https://your-server`.
+
+If the emulator can't reach `10.0.2.2:8000` (a VPN on the host can block it), tunnel the port over adb instead and point the app at localhost:
+
+```
+adb reverse tcp:8000 tcp:8000
+flutter run --dart-define=BACKEND_URL=http://localhost:8000
+```

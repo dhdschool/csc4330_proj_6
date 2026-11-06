@@ -1,16 +1,33 @@
 import 'package:flutter/material.dart';
 
 import '../models/calendar_event.dart';
+import '../models/club_event.dart';
 import '../services/calendar_api.dart';
+import '../services/followed_clubs.dart';
 import '../utils/date_format.dart';
 import 'agenda_view.dart';
 import 'calendar_view.dart';
+import 'clubs_view.dart';
 import 'holidays_view.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.repository, this.clock});
+  const HomeScreen({
+    super.key,
+    required this.repository,
+    this.clubRepository,
+    this.followStore,
+    this.clock,
+  });
 
   final CalendarRepository repository;
+
+  /// Club events load from here. Null leaves the Clubs tab unavailable, which
+  /// keeps the widget tests that only exercise the academic calendar simple.
+  final ClubRepository? clubRepository;
+
+  /// Which clubs the user follows. Defaults to a non-persistent store when the
+  /// app doesn't supply one.
+  final FollowStore? followStore;
 
   /// Overridable so tests can pin "today".
   final DateTime Function()? clock;
@@ -25,6 +42,17 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   int _tab = 0;
   final Set<EventCategory> _hiddenCategories = {};
+
+  // Club events load lazily the first time the Clubs tab is opened.
+  ClubEventsData? _clubData;
+  String? _clubError;
+  bool _clubLoading = false;
+  bool _clubsRequested = false;
+
+  // Falls back to an in-memory store when the app doesn't provide one.
+  late final FollowStore _followStore = widget.followStore ?? MemoryFollowStore();
+
+  static const _clubsTab = 3;
 
   late DateTime _today = dateOnly((widget.clock ?? DateTime.now)());
   late DateTime _focusedMonth = DateTime(_today.year, _today.month);
@@ -62,6 +90,41 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadClubs() async {
+    final repository = widget.clubRepository;
+    if (repository == null) return;
+    setState(() {
+      _clubLoading = true;
+      _clubsRequested = true;
+    });
+    try {
+      final data = await repository.fetchClubEvents();
+      if (!mounted) return;
+      setState(() {
+        _clubData = data;
+        _clubError = null;
+      });
+    } on Exception catch (error) {
+      if (!mounted) return;
+      final message = error is CalendarApiException
+          ? error.message
+          : 'Something went wrong loading club events.';
+      setState(() => _clubError = message);
+      if (_clubData != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _clubLoading = false);
+    }
+  }
+
+  void _onTabSelected(int index) {
+    setState(() => _tab = index);
+    // Fetch club events the first time the tab is opened, not at startup.
+    if (index == _clubsTab && !_clubsRequested) _loadClubs();
   }
 
   bool _isVisible(CalendarEvent event) =>
@@ -150,7 +213,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          if (_tab != 2)
+          // The category filter only applies to the academic calendar tabs.
+          if (_tab == 0 || _tab == 1)
             IconButton(
               tooltip: 'Filter categories',
               onPressed: _data == null ? null : _openFilters,
@@ -162,11 +226,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           IconButton(
             tooltip: 'Refresh',
-            onPressed: _loading ? null : _load,
+            onPressed: _loading || _clubLoading
+                ? null
+                : _tab == _clubsTab
+                ? _loadClubs
+                : _load,
             icon: const Icon(Icons.refresh),
           ),
         ],
-        bottom: _loading && _data != null
+        bottom: (_tab == _clubsTab ? _clubLoading && _clubData != null : _loading && _data != null)
             ? const PreferredSize(
                 preferredSize: Size.fromHeight(4),
                 child: LinearProgressIndicator(),
@@ -176,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _buildBody(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (index) => setState(() => _tab = index),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.calendar_view_month_outlined),
@@ -193,12 +261,19 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon: Icon(Icons.beach_access),
             label: 'Holidays',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.groups_outlined),
+            selectedIcon: Icon(Icons.groups),
+            label: 'Clubs',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildBody() {
+    if (_tab == _clubsTab) return _buildClubsBody();
+
     final data = _data;
     if (data == null) {
       if (_loading) {
@@ -243,10 +318,47 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
+  Widget _buildClubsBody() {
+    if (widget.clubRepository == null) {
+      return const _ErrorView(
+        message: 'Club events are not available in this build.',
+        onRetry: null,
+      );
+    }
+    final data = _clubData;
+    if (data == null) {
+      if (_clubLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return _ErrorView(message: _clubError!, onRetry: _loadClubs);
+    }
+    return Column(
+      children: [
+        if (data.stale)
+          const _StaleBanner(
+            message: "Couldn't reach TigerLink, so events may be out of date.",
+          ),
+        Expanded(
+          child: ClubsView(
+            data: data,
+            today: _today,
+            onRefresh: _loadClubs,
+            followStore: _followStore,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _StaleBanner extends StatelessWidget {
-  const _StaleBanner();
+  const _StaleBanner({
+    this.message =
+        "Couldn't reach LSU's site, so some dates may be out of date.",
+  });
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +373,7 @@ class _StaleBanner extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                "Couldn't reach LSU's site, so some dates may be out of date.",
+                message,
                 style: TextStyle(color: colors.onTertiaryContainer),
               ),
             ),
@@ -276,7 +388,7 @@ class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.message, required this.onRetry});
 
   final String message;
-  final VoidCallback onRetry;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -300,12 +412,14 @@ class _ErrorView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
-            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+              ),
+            ],
           ],
         ),
       ),

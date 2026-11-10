@@ -4,6 +4,7 @@ import '../models/calendar_event.dart';
 import '../utils/date_format.dart';
 import '../widgets/event_tile.dart';
 import '../widgets/month_calendar.dart';
+import '../widgets/section_header.dart';
 
 /// The month grid with the selected day's events below it, or beside it on
 /// wide screens.
@@ -128,7 +129,6 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final offset = daysBetween(today, day);
     final relative = switch (offset) {
       0 => 'Today',
@@ -136,24 +136,8 @@ class _DayHeader extends StatelessWidget {
       -1 => 'Yesterday',
       _ => null,
     };
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            if (relative != null)
-              TextSpan(
-                text: '$relative · ',
-                style: TextStyle(color: theme.colorScheme.primary),
-              ),
-            TextSpan(text: formatLongDate(day)),
-          ],
-        ),
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
+    final date = formatLongDate(day);
+    return SectionHeader(relative == null ? date : '$relative · $date');
   }
 }
 

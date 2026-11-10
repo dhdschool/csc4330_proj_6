@@ -3,73 +3,30 @@ import 'package:flutter/material.dart';
 import '../models/calendar_event.dart';
 import '../theme.dart';
 import '../utils/date_format.dart';
-import '../widgets/event_details_sheet.dart';
-import '../widgets/event_tile.dart';
+import 'event_details_sheet.dart';
 
-/// Upcoming holidays and breaks, with the next one featured at the top.
-class HolidaysView extends StatelessWidget {
-  const HolidaysView({
+/// The next (or current) holiday, with a countdown in days.
+class NextBreakBanner extends StatelessWidget {
+  const NextBreakBanner({
     super.key,
-    required this.holidays,
+    required this.holiday,
     required this.today,
-    required this.onRefresh,
   });
-
-  final List<CalendarEvent> holidays;
-  final DateTime today;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    final upcoming = [
-      for (final holiday in holidays)
-        if (!holiday.endDate!.isBefore(today)) holiday,
-    ];
-
-    return RefreshIndicator(
-      onRefresh: onRefresh,
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720),
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 16),
-            children: [
-              if (upcoming.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
-                    'No upcoming holidays have been published yet.',
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else ...[
-                _NextHolidayCard(holiday: upcoming.first, today: today),
-                for (final holiday in upcoming.skip(1))
-                  EventTile(
-                    event: holiday,
-                    trailing: _Countdown(
-                      text: formatCountdown(
-                        holiday.startDate!,
-                        holiday.endDate!,
-                        today,
-                      ),
-                    ),
-                  ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NextHolidayCard extends StatelessWidget {
-  const _NextHolidayCard({required this.holiday, required this.today});
 
   final CalendarEvent holiday;
   final DateTime today;
+
+  /// The first holiday that hasn't ended yet, or null if none is published.
+  /// Expects [events] sorted by start date, as the backend returns them.
+  static CalendarEvent? findNext(List<CalendarEvent> events, DateTime today) {
+    for (final event in events) {
+      if (event.category == EventCategory.holiday &&
+          !event.endDate!.isBefore(today)) {
+        return event;
+      }
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +37,7 @@ class _NextHolidayCard extends StatelessWidget {
     final happening = daysAway <= 0;
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       color: lsuPurple,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -147,32 +104,6 @@ class _NextHolidayCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Countdown extends StatelessWidget {
-  const _Countdown({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: EventCategory.holiday.color.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: colors.onSurface,
         ),
       ),
     );

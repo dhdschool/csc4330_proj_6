@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/calendar_event.dart';
 import '../utils/date_format.dart';
 import '../widgets/event_tile.dart';
+import '../widgets/section_header.dart';
+import '../widgets/next_break_banner.dart';
 
 /// Events in date order, grouped by month, with undated events at the end.
+/// A banner at the top counts down to the next break.
 class AgendaView extends StatefulWidget {
   const AgendaView({
     super.key,
@@ -12,12 +15,16 @@ class AgendaView extends StatefulWidget {
     required this.unscheduled,
     required this.today,
     required this.onRefresh,
+    this.nextBreak,
   });
 
   final List<CalendarEvent> events;
   final List<CalendarEvent> unscheduled;
   final DateTime today;
   final Future<void> Function() onRefresh;
+
+  /// Shown even when category filters hide holidays from the list.
+  final CalendarEvent? nextBreak;
 
   @override
   State<AgendaView> createState() => _AgendaViewState();
@@ -38,6 +45,8 @@ class _AgendaViewState extends State<AgendaView> {
 
     // Flatten into one list so ListView.builder can build rows lazily.
     final rows = <Widget>[
+      if (widget.nextBreak case final holiday?)
+        NextBreakBanner(holiday: holiday, today: widget.today),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: Row(
@@ -66,9 +75,7 @@ class _AgendaViewState extends State<AgendaView> {
           currentMonth.year != start.year ||
           currentMonth.month != start.month) {
         currentMonth = DateTime(start.year, start.month);
-        rows.add(
-          _SectionHeader('${monthNames[start.month - 1]} ${start.year}'),
-        );
+        rows.add(SectionHeader('${monthNames[start.month - 1]} ${start.year}'));
       }
       rows.add(
         EventTile(
@@ -89,7 +96,7 @@ class _AgendaViewState extends State<AgendaView> {
       );
     }
     if (widget.unscheduled.isNotEmpty) {
-      rows.add(const _SectionHeader('Dates to be announced'));
+      rows.add(const SectionHeader('Dates to be announced'));
       rows.addAll([
         for (final event in widget.unscheduled) EventTile(event: event),
       ]);
@@ -106,28 +113,6 @@ class _AgendaViewState extends State<AgendaView> {
             itemCount: rows.length,
             itemBuilder: (context, index) => rows[index],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 6),
-      child: Text(
-        title.toUpperCase(),
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
         ),
       ),
     );

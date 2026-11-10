@@ -4,6 +4,7 @@ import '../models/club_event.dart';
 import '../services/followed_clubs.dart';
 import '../utils/date_format.dart';
 import '../widgets/club_event_tile.dart';
+import '../widgets/section_header.dart';
 
 /// Upcoming club events from TigerLink. Defaults to events from clubs the user
 /// follows; a "Browse all" mode and a club picker let them discover more.
@@ -114,7 +115,9 @@ class _ClubsViewState extends State<ClubsView> {
                     ButtonSegment(
                       value: false,
                       label: Text(
-                        followCount == 0 ? 'Following' : 'Following ($followCount)',
+                        followCount == 0
+                            ? 'Following'
+                            : 'Following ($followCount)',
                       ),
                       icon: const Icon(Icons.star, size: 18),
                     ),
@@ -355,10 +358,7 @@ class _ClubPickerState extends State<_ClubPicker> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
-                child: Text(
-                  'Follow clubs',
-                  style: theme.textTheme.titleLarge,
-                ),
+                child: Text('Follow clubs', style: theme.textTheme.titleLarge),
               ),
               TextField(
                 controller: _controller,
@@ -383,8 +383,9 @@ class _ClubPickerState extends State<_ClubPicker> {
                           itemCount: clubs.length,
                           itemBuilder: (context, index) {
                             final club = clubs[index];
-                            final following =
-                                widget.followStore.isFollowing(club);
+                            final following = widget.followStore.isFollowing(
+                              club,
+                            );
                             final count = _upcomingByClub[club] ?? 0;
                             return ListTile(
                               title: Text(club),
@@ -394,8 +395,7 @@ class _ClubPickerState extends State<_ClubPicker> {
                                     : '$count upcoming events',
                               ),
                               trailing: IconButton(
-                                tooltip:
-                                    following ? 'Unfollow' : 'Follow',
+                                tooltip: following ? 'Unfollow' : 'Follow',
                                 icon: Icon(
                                   following ? Icons.star : Icons.star_border,
                                   color: following
@@ -427,20 +427,9 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final label = isSameDay(day, today)
         ? 'Today · ${formatDateRange(day, day, withYear: false)}'
         : formatDateRange(day, day);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-      child: Text(
-        label.toUpperCase(),
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: theme.colorScheme.primary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.1,
-        ),
-      ),
-    );
+    return SectionHeader(label);
   }
 }

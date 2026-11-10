@@ -137,19 +137,36 @@ void main() {
     expect(find.text('Classes begin'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('Commencement exercises'), 200);
-    expect(find.text('DATES TO BE ANNOUNCED'), findsOneWidget);
+    expect(find.text('Dates to be announced'), findsOneWidget);
   });
 
-  testWidgets('holidays tab counts down to the next break', (tester) async {
+  testWidgets('agenda banner counts down to the next break', (tester) async {
     await _pumpApp(tester);
 
-    await tester.tap(find.text('Holidays'));
+    await tester.tap(find.text('Agenda'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Holidays'), findsNothing);
+    expect(find.text('NEXT BREAK'), findsOneWidget);
+    expect(find.text('22'), findsOneWidget);
+    expect(find.text('days to go'), findsOneWidget);
+  });
+
+  testWidgets('agenda banner stays when filters hide holidays', (tester) async {
+    await _pumpApp(tester);
+    await tester.tap(find.text('Agenda'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Filter categories'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilterChip, 'Holiday'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 10)); // Close the sheet.
     await tester.pumpAndSettle();
 
     expect(find.text('NEXT BREAK'), findsOneWidget);
-    expect(find.text('22'), findsOneWidget);
-    expect(find.text('Spring Break'), findsOneWidget);
-    expect(find.text('In 5 months'), findsOneWidget);
+    // The banner's title is the only Thanksgiving left; the list hides it.
+    expect(find.text('Thanksgiving Holiday'), findsOneWidget);
   });
 
   testWidgets('category filter hides events', (tester) async {
@@ -165,7 +182,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Final date to drop'), findsNothing);
-    expect(find.text('Thanksgiving Holiday'), findsOneWidget);
+    // Once in the next-break banner and once in the list.
+    expect(find.text('Thanksgiving Holiday'), findsNWidgets(2));
   });
 
   testWidgets('shows an error with a working retry button', (tester) async {

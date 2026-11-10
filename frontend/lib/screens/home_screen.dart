@@ -4,11 +4,12 @@ import '../models/calendar_event.dart';
 import '../models/club_event.dart';
 import '../services/calendar_api.dart';
 import '../services/followed_clubs.dart';
+import '../theme.dart';
 import '../utils/date_format.dart';
+import '../widgets/next_break_banner.dart';
 import 'agenda_view.dart';
 import 'calendar_view.dart';
 import 'clubs_view.dart';
-import 'holidays_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -50,9 +51,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _clubsRequested = false;
 
   // Falls back to an in-memory store when the app doesn't provide one.
-  late final FollowStore _followStore = widget.followStore ?? MemoryFollowStore();
+  late final FollowStore _followStore =
+      widget.followStore ?? MemoryFollowStore();
 
-  static const _clubsTab = 3;
+  static const _clubsTab = 2;
+  static const _screenTitles = ['Academic Calendar', 'Agenda', 'Club Events'];
 
   late DateTime _today = dateOnly((widget.clock ?? DateTime.now)());
   late DateTime _focusedMonth = DateTime(_today.year, _today.month);
@@ -234,12 +237,12 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.refresh),
           ),
         ],
-        bottom: (_tab == _clubsTab ? _clubLoading && _clubData != null : _loading && _data != null)
-            ? const PreferredSize(
-                preferredSize: Size.fromHeight(4),
-                child: LinearProgressIndicator(),
-              )
-            : null,
+        bottom: _ScreenTitleBar(
+          title: _screenTitles[_tab],
+          loading: _tab == _clubsTab
+              ? _clubLoading && _clubData != null
+              : _loading && _data != null,
+        ),
       ),
       body: _buildBody(),
       bottomNavigationBar: NavigationBar(
@@ -255,11 +258,6 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.view_agenda_outlined),
             selectedIcon: Icon(Icons.view_agenda),
             label: 'Agenda',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.beach_access_outlined),
-            selectedIcon: Icon(Icons.beach_access),
-            label: 'Holidays',
           ),
           NavigationDestination(
             icon: Icon(Icons.groups_outlined),
@@ -283,33 +281,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final events = data.events.where(_isVisible).toList();
-    final view = switch (_tab) {
-      0 => CalendarView(
-        events: events,
-        today: _today,
-        focusedMonth: _focusedMonth,
-        selectedDay: _selectedDay,
-        onMonthChanged: (month) => setState(() => _focusedMonth = month),
-        onDaySelected: (day) => setState(() {
-          _selectedDay = day;
-          _focusedMonth = DateTime(day.year, day.month);
-        }),
-      ),
-      1 => AgendaView(
-        events: events,
-        unscheduled: data.unscheduled.where(_isVisible).toList(),
-        today: _today,
-        onRefresh: _load,
-      ),
-      _ => HolidaysView(
-        holidays: [
-          for (final event in data.events)
-            if (event.category == EventCategory.holiday) event,
-        ],
-        today: _today,
-        onRefresh: _load,
-      ),
-    };
+    final view = _tab == 0
+        ? CalendarView(
+            events: events,
+            today: _today,
+            focusedMonth: _focusedMonth,
+            selectedDay: _selectedDay,
+            onMonthChanged: (month) => setState(() => _focusedMonth = month),
+            onDaySelected: (day) => setState(() {
+              _selectedDay = day;
+              _focusedMonth = DateTime(day.year, day.month);
+            }),
+          )
+        : AgendaView(
+            events: events,
+            unscheduled: data.unscheduled.where(_isVisible).toList(),
+            today: _today,
+            onRefresh: _load,
+            nextBreak: NextBreakBanner.findNext(data.events, _today),
+          );
 
     return Column(
       children: [
@@ -420,6 +410,57 @@ class _ErrorView extends StatelessWidget {
                 label: const Text('Try again'),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The purple bar under the app bar that names the current screen, with a
+/// thin progress line while a refresh runs.
+class _ScreenTitleBar extends StatelessWidget implements PreferredSizeWidget {
+  const _ScreenTitleBar({required this.title, required this.loading});
+
+  final String title;
+  final bool loading;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(44);
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: lsuPurple,
+      child: SizedBox(
+        height: 44,
+        child: Stack(
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            if (loading)
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: LinearProgressIndicator(
+                  minHeight: 3,
+                  color: lsuGold,
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
           ],
         ),
       ),

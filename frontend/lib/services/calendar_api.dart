@@ -82,9 +82,8 @@ class CalendarApi implements CalendarRepository, ClubRepository {
         '${today.year.toString().padLeft(4, '0')}-'
         '${today.month.toString().padLeft(2, '0')}-'
         '${today.day.toString().padLeft(2, '0')}';
-    final uri = Uri.parse('$baseUrl/api/tigerlink/events').replace(
-      queryParameters: {'start': start, 'limit': '1500'},
-    );
+    final uri = Uri.parse('$baseUrl/api/tigerlink/events')
+        .replace(queryParameters: {'start': start, 'limit': '1500'});
     final http.Response response;
     try {
       response = await _client.get(uri).timeout(const Duration(seconds: 30));

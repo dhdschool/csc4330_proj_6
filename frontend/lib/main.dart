@@ -12,11 +12,7 @@ Future<void> main() async {
   // Load the user's followed clubs from device storage.
   final follows = await PrefsFollowStore.create();
   runApp(
-    LsuCalendarApp(
-      repository: api,
-      clubRepository: api,
-      followStore: follows,
-    ),
+    LsuCalendarApp(repository: api, clubRepository: api, followStore: follows),
   );
 }
 
@@ -39,8 +35,9 @@ class LsuCalendarApp extends StatelessWidget {
     return MaterialApp(
       title: 'LSU Calendar',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(Brightness.light),
-      darkTheme: buildTheme(Brightness.dark),
+      theme: buildTheme(),
+      // Always light, even when the device is in dark mode.
+      themeMode: ThemeMode.light,
       home: HomeScreen(
         repository: repository,
         clubRepository: clubRepository,

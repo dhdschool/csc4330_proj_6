@@ -41,54 +41,50 @@ class EventTile extends StatelessWidget {
         'Classes end ${formatTime(event.classesEndAt!)}',
     ].join(' · ');
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      clipBehavior: Clip.antiAlias,
+    // A flat list row with a divider, rather than a card.
+    return Material(
+      color: theme.colorScheme.surface,
       child: InkWell(
         onTap: () => showEventDetails(context, event),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(width: 5, color: event.category.color),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  child: Row(
-                    children: [
-                      CategoryBadge(category: event.category),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              event.title,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            if (event.tentative) ...[
-                              const SizedBox(height: 4),
-                              const TentativeChip(),
-                            ],
-                          ],
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+              child: Row(
+                children: [
+                  CategoryBadge(category: event.category, size: 36),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      ?trailing,
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (event.tentative) ...[
+                          const SizedBox(height: 4),
+                          const TentativeChip(),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
+                  ?trailing,
+                  Icon(Icons.chevron_right, color: theme.colorScheme.outline),
+                ],
               ),
-            ],
-          ),
+            ),
+            const Divider(indent: 64),
+          ],
         ),
       ),
     );

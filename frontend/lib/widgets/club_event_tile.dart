@@ -46,79 +46,71 @@ class ClubEventTile extends StatelessWidget {
     final theme = Theme.of(context);
     final style = _styleFor(event.eventType);
     final time = event.allDay ? 'All day' : _clockTime(event.start);
-    final subtitle = [
-      time,
-      if (event.club != null) event.club!,
-    ].join(' · ');
+    final subtitle = [time, if (event.club != null) event.club!].join(' · ');
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      clipBehavior: Clip.antiAlias,
+    // A flat list row with a divider, rather than a card.
+    return Material(
+      color: theme.colorScheme.surface,
       child: InkWell(
         onTap: () => showClubEventDetails(context, event),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(width: 5, color: style.color),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: style.color.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(style.icon, color: style.color, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              event.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (onToggleFollow != null)
-                        IconButton(
-                          tooltip: following
-                              ? 'Unfollow ${event.club}'
-                              : 'Follow ${event.club}',
-                          visualDensity: VisualDensity.compact,
-                          icon: Icon(
-                            following ? Icons.star : Icons.star_border,
-                            color: following ? style.color : null,
-                            size: 22,
-                          ),
-                          onPressed: onToggleFollow,
-                        ),
-                    ],
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: style.color.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(style.icon, color: style.color, size: 22),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          event.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (onToggleFollow != null)
+                    IconButton(
+                      tooltip: following
+                          ? 'Unfollow ${event.club}'
+                          : 'Follow ${event.club}',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        following ? Icons.star : Icons.star_border,
+                        color: following ? style.color : null,
+                        size: 22,
+                      ),
+                      onPressed: onToggleFollow,
+                    ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const Divider(indent: 68),
+          ],
         ),
       ),
     );
@@ -188,10 +180,7 @@ class _ClubEventDetails extends StatelessWidget {
               const SizedBox(height: 12),
               Text(event.title, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 16),
-              _DetailRow(
-                icon: Icons.event,
-                text: formatLongDate(event.start),
-              ),
+              _DetailRow(icon: Icons.event, text: formatLongDate(event.start)),
               _DetailRow(icon: Icons.schedule, text: timeLine),
               if (event.club != null)
                 _DetailRow(icon: Icons.groups, text: event.club!),
@@ -199,10 +188,7 @@ class _ClubEventDetails extends StatelessWidget {
                 _DetailRow(icon: Icons.place, text: event.location!),
               if (event.description != null) ...[
                 const SizedBox(height: 16),
-                Text(
-                  event.description!,
-                  style: theme.textTheme.bodyMedium,
-                ),
+                Text(event.description!, style: theme.textTheme.bodyMedium),
               ],
             ],
           ),

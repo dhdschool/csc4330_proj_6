@@ -30,12 +30,27 @@ Map<String, dynamic> _clubEvent(
 final _clubJson = {
   'events': [
     // Noon UTC avoids a local-timezone date shift in the test's day grouping.
-    _clubEvent('1', 'Chess Club Meeting', 'Meeting', '2026-11-10T18:00:00Z',
-        club: 'Chess Club'),
-    _clubEvent('2', 'Food Drive', 'Service', '2026-11-12T17:00:00Z',
-        club: 'Volunteer LSU'),
-    _clubEvent('3', 'Past Social', 'Social', '2026-10-01T17:00:00Z',
-        club: 'Old Club'),
+    _clubEvent(
+      '1',
+      'Chess Club Meeting',
+      'Meeting',
+      '2026-11-10T18:00:00Z',
+      club: 'Chess Club',
+    ),
+    _clubEvent(
+      '2',
+      'Food Drive',
+      'Service',
+      '2026-11-12T17:00:00Z',
+      club: 'Volunteer LSU',
+    ),
+    _clubEvent(
+      '3',
+      'Past Social',
+      'Social',
+      '2026-10-01T17:00:00Z',
+      club: 'Old Club',
+    ),
   ],
   'source': 'https://tigerlink.lsu.edu/events',
   'fetched_at': '2026-11-06T12:00:00Z',
@@ -110,7 +125,10 @@ Future<void> _browseAll(WidgetTester tester) async {
 void main() {
   setUp(() {
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
-    binding.platformDispatcher.views.first.physicalSize = const Size(1080, 2400);
+    binding.platformDispatcher.views.first.physicalSize = const Size(
+      1080,
+      2400,
+    );
     binding.platformDispatcher.views.first.devicePixelRatio = 2.5;
   });
 

@@ -48,6 +48,11 @@ Returns club and organization events from the public [TigerLink](https://tigerli
 
 Each event has `start`/`end` as UTC timestamps, plus `club`, `event_type`, `tags`, `location` and `url`. A `location` of `null` means TigerLink only shows it to signed-in users. `stale` is `true` if the last refresh failed.
 
+For the map, each event also has:
+
+- `venue`: the location without the default "Campus Life, 358J LSU Student Union" address TigerLink appends to most campus locations, e.g. `167 Coates Hall`. Use this for display.
+- `place`, `latitude`, `longitude`: the campus building the venue matched, from the table in `campus_places.py`. They're `null` for off-campus addresses, online or TBD events, and buildings the table doesn't cover (such as White Hall, which isn't in OpenStreetMap).
+
 ## Frontend
 
 A Flutter app with three tabs: a month view of the LSU academic calendar, an agenda with a banner counting down to the next break, and a Clubs tab for TigerLink events. The Clubs tab shows events from clubs you follow by default, with an "All" view, search and type filters. Followed clubs are saved on the device with `shared_preferences`; there's no account, since TigerLink memberships aren't available without LSU's authorized API. Start the backend first, then from the `frontend` folder:

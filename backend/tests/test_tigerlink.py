@@ -111,3 +111,17 @@ def test_event_without_a_start_is_skipped():
 def test_non_calendar_text_raises():
     with pytest.raises(TigerLinkParseError):
         parse_feed("<html>Access Denied</html>")
+
+
+def test_campus_location_gets_venue_and_coordinates(events):
+    event = next(e for e in events if e.location and "Coates" in e.location)
+    assert event.venue == "167 Coates Hall"
+    assert event.place == "Coates Hall"
+    assert event.latitude == pytest.approx(30.4132, abs=1e-3)
+    assert event.longitude == pytest.approx(-91.1791, abs=1e-3)
+
+
+def test_hidden_location_has_no_coordinates(events):
+    hidden = [e for e in events if e.location is None]
+    assert hidden
+    assert all(e.venue is None and e.latitude is None for e in hidden)

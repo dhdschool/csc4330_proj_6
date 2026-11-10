@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/club_event.dart';
 import '../utils/date_format.dart';
+import 'campus_map.dart';
 
 /// Maps a TigerLink event type to an icon and color. Unknown types fall back
 /// to a neutral default, so new types from the feed still render.
@@ -184,8 +185,7 @@ class _ClubEventDetails extends StatelessWidget {
               _DetailRow(icon: Icons.schedule, text: timeLine),
               if (event.club != null)
                 _DetailRow(icon: Icons.groups, text: event.club!),
-              if (event.location != null)
-                _DetailRow(icon: Icons.place, text: event.location!),
+              _LocationSection(event: event),
               if (event.description != null) ...[
                 const SizedBox(height: 16),
                 Text(event.description!, style: theme.textTheme.bodyMedium),
@@ -217,6 +217,77 @@ class _DetailRow extends StatelessWidget {
           Expanded(child: Text(text, style: theme.textTheme.bodyLarge)),
         ],
       ),
+    );
+  }
+}
+
+/// Where the event is: a small map and directions for campus buildings, the
+/// address for anywhere else, or a note when TigerLink hides the location.
+class _LocationSection extends StatelessWidget {
+  const _LocationSection({required this.event});
+
+  final ClubEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final venue = event.venue;
+    final place = event.place;
+    // Show the building name too when the venue text doesn't already say it,
+    // e.g. "Tchopitoulas Room" is in the LSU Student Union.
+    final showPlace = place != null &&
+        venue != null &&
+        !venue.toLowerCase().contains(place.toLowerCase());
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (venue != null)
+          _DetailRow(
+            icon: Icons.place,
+            text: showPlace ? '$venue\n$place' : venue,
+          )
+        else
+          _DetailRow(
+            icon: Icons.location_off_outlined,
+            text: 'Location only shown on TigerLink after signing in',
+          ),
+        if (event.hasCoordinates) ...[
+          const SizedBox(height: 8),
+          EventMapPreview(event: event),
+        ],
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (venue != null)
+              FilledButton.icon(
+                onPressed: () => openDirections(event),
+                icon: const Icon(Icons.directions),
+                label: const Text('Directions'),
+              ),
+            if (event.url != null)
+              OutlinedButton.icon(
+                onPressed: () => openOnTigerLink(event),
+                icon: const Icon(Icons.open_in_new),
+                label: Text(
+                  venue == null ? 'See location on TigerLink' : 'TigerLink',
+                ),
+              ),
+          ],
+        ),
+        if (venue != null && !event.hasCoordinates)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Not on the campus map; directions search for this address.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -50,7 +50,7 @@ Each event has `start`/`end` as UTC timestamps, plus `club`, `event_type`, `tags
 
 ## Frontend
 
-A Flutter app with four tabs: a month view and agenda of the LSU academic calendar, a holidays tab that counts down to the next break, and a Clubs tab listing upcoming TigerLink events with search and type filters. Start the backend first, then from the `frontend` folder:
+A Flutter app with four tabs: a month view and agenda of the LSU academic calendar, a holidays tab that counts down to the next break, and a Clubs tab for TigerLink events. The Clubs tab shows events from clubs you follow by default, with an "All" view, search and type filters. Followed clubs are saved on the device with `shared_preferences`; there's no account, since TigerLink memberships aren't available without LSU's authorized API. Start the backend first, then from the `frontend` folder:
 
 ```
 flutter pub get

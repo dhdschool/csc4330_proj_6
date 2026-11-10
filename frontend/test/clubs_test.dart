@@ -6,6 +6,7 @@ import 'package:frontend/models/calendar_event.dart';
 import 'package:frontend/models/club_event.dart';
 import 'package:frontend/services/calendar_api.dart';
 import 'package:frontend/services/followed_clubs.dart';
+import 'package:frontend/widgets/campus_map.dart';
 
 Map<String, dynamic> _clubEvent(
   String id,
@@ -14,6 +15,10 @@ Map<String, dynamic> _clubEvent(
   String startUtc, {
   String? club,
   String? location,
+  String? venue,
+  String? place,
+  double? latitude,
+  double? longitude,
 }) => {
   'id': id,
   'title': title,
@@ -24,6 +29,10 @@ Map<String, dynamic> _clubEvent(
   'club': club,
   'club_acronym': club,
   'location': location,
+  'venue': venue,
+  'place': place,
+  'latitude': latitude,
+  'longitude': longitude,
   'tags': <String>[],
 };
 
@@ -31,7 +40,12 @@ final _clubJson = {
   'events': [
     // Noon UTC avoids a local-timezone date shift in the test's day grouping.
     _clubEvent('1', 'Chess Club Meeting', 'Meeting', '2026-11-10T18:00:00Z',
-        club: 'Chess Club'),
+        club: 'Chess Club',
+        location: '167 Coates Hall, Campus Life , 358J LSU Student Union',
+        venue: '167 Coates Hall',
+        place: 'Coates Hall',
+        latitude: 30.4132,
+        longitude: -91.1791),
     _clubEvent('2', 'Food Drive', 'Service', '2026-11-12T17:00:00Z',
         club: 'Volunteer LSU'),
     _clubEvent('3', 'Past Social', 'Social', '2026-10-01T17:00:00Z',
@@ -109,6 +123,7 @@ Future<void> _browseAll(WidgetTester tester) async {
 
 void main() {
   setUp(() {
+    CampusMap.showTiles = false; // tests can't load network tiles
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
     binding.platformDispatcher.views.first.physicalSize = const Size(1080, 2400);
     binding.platformDispatcher.views.first.devicePixelRatio = 2.5;
@@ -120,6 +135,9 @@ void main() {
     expect(data.eventTypes, ['Meeting', 'Service', 'Social']);
     expect(data.clubs, ['Chess Club', 'Old Club', 'Volunteer LSU']);
     expect(data.events.first.club, 'Chess Club');
+    expect(data.events.first.hasCoordinates, isTrue);
+    expect(data.events.first.latitude, 30.4132);
+    expect(data.events[1].hasCoordinates, isFalse);
   });
 
   testWidgets('clubs load lazily and prompt to follow when none are followed', (
@@ -246,5 +264,62 @@ void main() {
     // Loads, and the followed club's event appears.
     expect(find.text('Chess Club Meeting'), findsOneWidget);
     expect(api.clubCalls, 2);
+  });
+
+  testWidgets('event details show the venue, a map and directions', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await _openClubs(tester);
+    await _browseAll(tester);
+
+    await tester.tap(find.text('Chess Club Meeting'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('167 Coates Hall'), findsOneWidget);
+    expect(find.byType(EventMapPreview), findsOneWidget);
+    expect(find.text('Directions'), findsOneWidget);
+  });
+
+  testWidgets('a hidden location says to check TigerLink', (tester) async {
+    await _pump(tester);
+    await _openClubs(tester);
+    await _browseAll(tester);
+
+    await tester.tap(find.text('Food Drive'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Location only shown on TigerLink after signing in'),
+      findsOneWidget,
+    );
+    expect(find.byType(EventMapPreview), findsNothing);
+    expect(find.text('Directions'), findsNothing);
+  });
+
+  testWidgets('map mode pins events and lists them per building', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await _openClubs(tester);
+    await _browseAll(tester);
+
+    await tester.tap(find.byTooltip('Show map'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ClubsMapView), findsOneWidget);
+    // Chess Club is at Coates; Food Drive has no location, so no pin.
+    expect(find.textContaining('1 on the map'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('pin-Coates Hall')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Coates Hall'), findsOneWidget);
+    expect(find.text('Chess Club Meeting'), findsOneWidget);
+
+    // Back to the list.
+    await tester.tap(find.text('Chess Club Meeting'));
+    await tester.pumpAndSettle();
+    expect(find.text('Directions'), findsOneWidget);
   });
 }

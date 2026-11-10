@@ -17,6 +17,8 @@ from datetime import date, datetime, timedelta, timezone
 import httpx
 from pydantic import BaseModel
 
+from campus_places import locate, venue_of
+
 logger = logging.getLogger(__name__)
 
 FEED_URL = "https://tigerlink.lsu.edu/ical/lsu/ical_lsu.ics"
@@ -40,7 +42,16 @@ class ClubEvent(BaseModel):
     start: datetime
     end: datetime | None = None
     all_day: bool = False
+    # The raw TigerLink location text.
     location: str | None = None
+    # The location without the default Student Union address CampusGroups
+    # appends, e.g. "167 Coates Hall". Use this for display.
+    venue: str | None = None
+    # The campus building the venue was matched to, with its coordinates.
+    # All three are null when the event can't be placed on the map.
+    place: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     url: str | None = None
     club: str | None = None
     club_acronym: str | None = None
@@ -168,6 +179,13 @@ def _build_event(props: list[_Property]) -> ClubEvent | None:
     title = fields.get("title")
     if not title or start is None:
         return None  # not a usable event
+
+    venue = venue_of(fields.get("location"))  # type: ignore[arg-type]
+    fields["venue"] = venue
+    if place := locate(venue):
+        fields["place"] = place.name
+        fields["latitude"] = place.latitude
+        fields["longitude"] = place.longitude
     return ClubEvent(
         id=_stable_id(fields.get("url"), uid, str(title)),  # type: ignore[arg-type]
         start=start,

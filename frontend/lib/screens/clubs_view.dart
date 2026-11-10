@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/club_event.dart';
 import '../services/followed_clubs.dart';
 import '../utils/date_format.dart';
+import '../widgets/campus_map.dart';
 import '../widgets/club_event_tile.dart';
 
 /// Upcoming club events from TigerLink. Defaults to events from clubs the user
@@ -30,6 +31,7 @@ class _ClubsViewState extends State<ClubsView> {
   String _search = '';
   String? _type; // null means "all types"
   bool _showAll = false; // false = Following, true = Browse all
+  bool _mapMode = false; // show events on a campus map instead of a list
 
   @override
   void dispose() {
@@ -129,6 +131,11 @@ class _ClubsViewState extends State<ClubsView> {
                 ),
               ),
               IconButton(
+                tooltip: _mapMode ? 'Show list' : 'Show map',
+                onPressed: () => setState(() => _mapMode = !_mapMode),
+                icon: Icon(_mapMode ? Icons.view_list : Icons.map_outlined),
+              ),
+              IconButton(
                 tooltip: 'Follow clubs',
                 onPressed: _openClubPicker,
                 icon: const Icon(Icons.group_add_outlined),
@@ -206,6 +213,11 @@ class _ClubsViewState extends State<ClubsView> {
                     following: followCount > 0,
                     onBrowse: () => setState(() => _showAll = true),
                     onPickClubs: _openClubPicker,
+                  )
+                : _mapMode
+                ? ClubsMapView(
+                    events: events,
+                    onEventTap: (event) => showClubEventDetails(context, event),
                   )
                 : Center(
                     child: ConstrainedBox(

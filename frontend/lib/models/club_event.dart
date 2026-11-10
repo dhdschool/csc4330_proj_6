@@ -8,6 +8,10 @@ class ClubEvent {
     this.allDay = false,
     this.description,
     this.location,
+    this.venue,
+    this.place,
+    this.latitude,
+    this.longitude,
     this.url,
     this.club,
     this.clubAcronym,
@@ -26,6 +30,10 @@ class ClubEvent {
         : DateTime.parse(json['end'] as String).toLocal(),
     allDay: json['all_day'] as bool? ?? false,
     location: json['location'] as String?,
+    venue: json['venue'] as String?,
+    place: json['place'] as String?,
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
     url: json['url'] as String?,
     club: json['club'] as String?,
     clubAcronym: json['club_acronym'] as String?,
@@ -40,6 +48,15 @@ class ClubEvent {
   final DateTime? end;
   final bool allDay;
   final String? location;
+
+  /// The location without TigerLink's default Student Union address, e.g.
+  /// "167 Coates Hall". Prefer this for display.
+  final String? venue;
+
+  /// The campus building the venue was matched to, if any.
+  final String? place;
+  final double? latitude;
+  final double? longitude;
   final String? url;
   final String? club;
   final String? clubAcronym;
@@ -47,6 +64,9 @@ class ClubEvent {
   final List<String> tags;
 
   DateTime get day => DateTime(start.year, start.month, start.day);
+
+  /// Whether the event can be pinned on the map.
+  bool get hasCoordinates => latitude != null && longitude != null;
 }
 
 class ClubEventsData {

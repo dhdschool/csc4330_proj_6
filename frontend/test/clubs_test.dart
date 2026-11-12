@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:frontend/main.dart';
 import 'package:frontend/models/calendar_event.dart';
@@ -387,6 +388,89 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(follows.clubs, {'Volunteer LSU'});
+  });
+
+  testWidgets(
+    'saved clubs absent from the feed can be searched and unfollowed',
+    (tester) async {
+      final follows = MemoryFollowStore(['Chess Club', 'archived club']);
+      await _pump(tester, follows: follows);
+      await _openClubs(tester);
+      await tester.tap(find.byTooltip('Follow clubs'));
+      await tester.pumpAndSettle();
+
+      // Merge and deduplicate saved follows with the feed, keeping alphabetical
+      // order and the existing counts for clubs that still have events.
+      expect(find.text('Search 4 clubs'), findsOneWidget);
+      expect(
+        tester
+            .widgetList<ListTile>(find.byType(ListTile))
+            .map((tile) => (tile.title! as Text).data),
+        ['archived club', 'Chess Club', 'Old Club', 'Volunteer LSU'],
+      );
+      final chess = find.widgetWithText(ListTile, 'Chess Club');
+      expect(
+        find.descendant(of: chess, matching: find.text('1 upcoming event')),
+        findsOneWidget,
+      );
+      final search = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(search, '  ArChIvEd  ');
+      await tester.pumpAndSettle();
+      expect(find.text('archived club'), findsOneWidget);
+      expect(find.text('0 upcoming events'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Unfollow'));
+      await tester.pumpAndSettle();
+      expect(follows.clubs, {'Chess Club'});
+      expect(find.text('archived club'), findsNothing);
+      expect(find.text('Search 3 clubs'), findsOneWidget);
+      expect(find.text('No clubs match your search.'), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Following (1)'), findsOneWidget);
+      expect(find.text('Chess Club Meeting'), findsOneWidget);
+    },
+  );
+
+  testWidgets('saved clubs can be unfollowed persistently with an empty feed', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'followed_clubs': ['Missing Club'],
+    });
+    addTearDown(() => SharedPreferences.setMockInitialValues({}));
+    final follows = await PrefsFollowStore.create();
+    final api = _FakeApi(
+      clubResult: () async => ClubEventsData.fromJson({
+        ..._clubJson,
+        'events': <Map<String, dynamic>>[],
+      }),
+    );
+    await _pump(tester, api: api, follows: follows);
+    await _openClubs(tester);
+    await tester.tap(find.byTooltip('Follow clubs'));
+    await tester.pumpAndSettle();
+    expect(find.text('Search 1 clubs'), findsOneWidget);
+    expect(find.text('Missing Club'), findsOneWidget);
+    expect(find.text('0 upcoming events'), findsOneWidget);
+
+    await tester.tap(find.text('Missing Club'));
+    await tester.pumpAndSettle();
+    expect(follows.clubs, isEmpty);
+    expect(find.text('Missing Club'), findsNothing);
+    expect(find.text('Search 0 clubs'), findsOneWidget);
+    expect(find.text('No clubs match your search.'), findsOneWidget);
+    final reloaded = await PrefsFollowStore.create();
+    expect(reloaded.clubs, isEmpty);
+    reloaded.dispose();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text("You're not following any clubs yet"), findsOneWidget);
   });
 
   testWidgets('search filters club events', (tester) async {

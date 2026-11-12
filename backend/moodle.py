@@ -5,6 +5,7 @@ import asyncio
 from playwright.async_api import async_playwright, Route
 from bs4 import BeautifulSoup
 from typing import Literal
+import logging
 
 ENV_FP = "moodle.env"
 
@@ -101,30 +102,25 @@ class LoginRequest(BaseRequest):
     
     resp = super().get()
     config = get_config(resp.text)
-    print(f"Cookies: {resp.cookies}")
-    print(f"Login sesskey: {config["sesskey"]}")
+    logging.log(level=logging.INFO, msg=f"Cookies: {resp.cookies}")
+    logging.log(level=logging.INFO, msg=f"Login sesskey: {config["sesskey"]}")
     
     moodle4_token = resp.cookies['MoodleSessionlsumoodle4']
     login_request = BaseRequest("/auth/oauth2/login.php", cookies={"MoodleSessionlsumoodle4": moodle4_token})
     try: 
       redir = login_request.get({"id": "1", "wantsurl": "/", "sesskey": config["sesskey"]})
     except requests.exceptions.TooManyRedirects as e:
-      print(f"Too many redirects, dumping error history: {e.response.history}")
+      logging.log(level=logging.WARNING, msg=f"Too many redirects, dumping error history: {e.response.history}")
       exit()
     
     headers = login_request.headers.copy()
     del headers['Host']
     
-    print() 
-    print(f"Login link: {redir.headers['Location']}")
-    print()
+    logging.log(level=logging.INFO, msg=f"Login link: {redir.headers['Location']}")
     asyncio.run(self.auth_login(redir.headers['Location']))
     
-    print()
-    print(f"Moodle 4 token: {moodle4_token}")
-
-    print()
-    print(f"Authorization successful: {self.is_authorized()}")
+    logging.log(level=logging.INFO, msg=f"Moodle 4 token: {moodle4_token}")
+    logging.log(level=logging.INFO, msg=f"Authorization successful: {self.is_authorized()}")
       
   async def auth_login(self, login_url: str):
     global moodle4_token
@@ -151,7 +147,7 @@ class LoginRequest(BaseRequest):
         for cookie in cookies:
           if cookie["name"] == "MoodleSessionlsumoodle4":
              if cookie["value"] != moodle4_token:
-                print(f"Moodle Session Key changed to {cookie["value"]}")
+                logging.log(level=logging.INFO, msg=f"Moodle Session Key changed to {cookie["value"]}")
                 moodle4_token = cookie["value"]
                 
                 await route.abort()
@@ -283,6 +279,8 @@ base_headers = {
 }
 
 if __name__ == "__main__":
+  logging.basicConfig(level=logging.INFO)
+  
   view_endpoint = ViewCourses()
   courses_endpoint = GetCourses()
   login_endpoint = LoginRequest()
@@ -291,33 +289,32 @@ if __name__ == "__main__":
     login_endpoint.get()
   
   resp = view_endpoint.get()
-  print(f"Status code: f{resp.status_code}")
+  logging.log(level=logging.INFO, msg=f"Status code: f{resp.status_code}")
   
   if resp.status_code != 200:
-    print(f"View courses error")
+    logging.log(level=logging.ERROR, msg=f"View courses error")
 
   if resp.status_code == 200:  
     config = get_config(resp.text)  
-    print(f"M.cfg: {json.dumps(config, indent=2)}")
+    logging.log(level=logging.INFO, msg=f"M.cfg: {json.dumps(config, indent=2)}")
     sesskey = config["sesskey"]
         
     resp = courses_endpoint.post(sesskey)
-    print(f"\nCourses status code: {resp.status_code}")
+    logging.log(level=logging.INFO, msg=f"\nCourses status code: {resp.status_code}")
     
     if resp.status_code != 200:
-      print(f"Get courses error")
+      logging.log(level=logging.ERROR, msg=f"Get courses error")
     
     else:
       if resp.json()[0].get("error", False) == True:
-        print(f"Failed resp headers: {json.dumps(dict(resp.headers), indent=2)}")
+        logging.log(level=logging.WARNING, msg=f"Failed resp headers: {json.dumps(dict(resp.headers), indent=2)}")
         
-      print(f"Resp json: {json.dumps(resp.json(), indent=2)}")
+      logging.log(level=logging.INFO, msg=f"Resp json: {json.dumps(resp.json(), indent=2)}")
       
     scheduleurl_endpoint = GetScheduleUrl()
     calender_url = scheduleurl_endpoint.get_calendar_url(sesskey)
     
-    print(f"URL: {calender_url}")
-    print()
-    print(f"Calendar response:\n{requests.get(calender_url).text}")
-    print()
-    print(f"Course schedule response:\n{GetCourseSchedule().get().text}")
+    logging.log(level=logging.INFO, msg=f"All Calendar URL: {calender_url}")
+    logging.log(level=logging.INFO, msg=f"All Calendar response:\n{requests.get(calender_url).text}")
+    logging.log(level=logging.INFO, msg=f"Course schedule response:\n{GetCourseSchedule().get().text}")
+      

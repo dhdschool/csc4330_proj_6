@@ -97,6 +97,17 @@ def test_all_day_event_without_a_time():
     assert event.start == datetime(2026, 11, 9, 0, 0, tzinfo=timezone.utc)
 
 
+@pytest.mark.parametrize("club", ["LSU: Robotics Club", "Chess; Go & Shogi Club"])
+def test_quoted_organizer_name_can_contain_colons_and_semicolons(club):
+    ics = (
+        "BEGIN:VCALENDAR\nBEGIN:VEVENT\n"
+        f'SUMMARY:Build Night\nORGANIZER;CN="{club}":mailto:noreply@tigerlink.lsu.edu\n'
+        "DTSTART:20261106T180000Z\nURL:https://x/rsvp?id=9\n"
+        "END:VEVENT\nEND:VCALENDAR\n"
+    )
+    assert parse_feed(ics)[0].club == club
+
+
 def test_event_without_a_start_is_skipped():
     ics = (
         "BEGIN:VCALENDAR\n"

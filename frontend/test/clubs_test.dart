@@ -13,6 +13,7 @@ Map<String, dynamic> _clubEvent(
   String title,
   String type,
   String startUtc, {
+  String? endUtc,
   String? club,
   String? location,
   String? venue,
@@ -23,7 +24,7 @@ Map<String, dynamic> _clubEvent(
   'id': id,
   'title': title,
   'start': startUtc,
-  'end': null,
+  'end': endUtc,
   'all_day': false,
   'event_type': type,
   'club': club,
@@ -156,6 +157,99 @@ void main() {
     expect(data.events.first.hasCoordinates, isTrue);
     expect(data.events.first.latitude, 30.4132);
     expect(data.events[1].hasCoordinates, isFalse);
+  });
+
+  group('events already in progress', () {
+    // The tests pin "today" to Friday, Nov 6 (local time).
+    final today = DateTime(2026, 11, 6);
+
+    test('an event that started yesterday and ends tomorrow is current', () {
+      final event = ClubEvent(
+        id: 'r',
+        title: 'Fall Retreat',
+        start: DateTime(2026, 11, 5, 9),
+        end: DateTime(2026, 11, 7, 17),
+      );
+      expect(event.lastDay, DateTime(2026, 11, 7));
+      expect(event.isCurrentOrUpcoming(today), isTrue);
+    });
+
+    test('an event that ended yesterday is not', () {
+      final event = ClubEvent(
+        id: 'p',
+        title: 'Done',
+        start: DateTime(2026, 11, 4, 9),
+        end: DateTime(2026, 11, 5, 17),
+      );
+      expect(event.isCurrentOrUpcoming(today), isFalse);
+    });
+
+    test('an end at midnight belongs to the day before', () {
+      // iCalendar end times are exclusive: this event is over by Nov 6.
+      final event = ClubEvent(
+        id: 'm',
+        title: 'Late Night',
+        start: DateTime(2026, 11, 5, 20),
+        end: DateTime(2026, 11, 6),
+      );
+      expect(event.lastDay, DateTime(2026, 11, 5));
+      expect(event.isCurrentOrUpcoming(today), isFalse);
+    });
+
+    test('an event without an end uses its start day', () {
+      final event = ClubEvent(
+        id: 's',
+        title: 'Social',
+        start: DateTime(2026, 11, 5, 18),
+      );
+      expect(event.lastDay, DateTime(2026, 11, 5));
+      expect(event.isCurrentOrUpcoming(today), isFalse);
+    });
+
+    testWidgets('stay listed under Today and count in the club picker', (
+      tester,
+    ) async {
+      final json = {
+        ..._clubJson,
+        'events': [
+          // Started Thursday, runs through Saturday: in progress today.
+          _clubEvent(
+            'r',
+            'Fall Retreat',
+            'Social',
+            '2026-11-05T17:00:00Z',
+            endUtc: '2026-11-07T17:00:00Z',
+            club: 'Chess Club',
+          ),
+          // Started Wednesday, ended Thursday: over.
+          _clubEvent(
+            'd',
+            'Finished Workshop',
+            'Workshop',
+            '2026-11-04T17:00:00Z',
+            endUtc: '2026-11-05T17:00:00Z',
+            club: 'Chess Club',
+          ),
+          ...(_clubJson['events']! as List),
+        ],
+      };
+      final api = _FakeApi(
+        clubResult: () async => ClubEventsData.fromJson(json),
+      );
+      await _pump(tester, api: api);
+      await _openClubs(tester);
+      await _browseAll(tester);
+
+      expect(find.text('Fall Retreat'), findsOneWidget);
+      expect(find.text('Finished Workshop'), findsNothing);
+      // Grouped under today rather than the day it started.
+      expect(find.textContaining('Today ·'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Follow clubs'));
+      await tester.pumpAndSettle();
+      // Chess Club: the retreat plus the Nov 10 meeting.
+      expect(find.text('2 upcoming events'), findsOneWidget);
+    });
   });
 
   testWidgets('clubs load lazily and prompt to follow when none are followed', (

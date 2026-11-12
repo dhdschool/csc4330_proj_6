@@ -65,6 +65,19 @@ class ClubEvent {
 
   DateTime get day => DateTime(start.year, start.month, start.day);
 
+  /// The last calendar day the event covers. An end exactly at midnight
+  /// belongs to the day before, since iCalendar end times are exclusive.
+  DateTime get lastDay {
+    final e = end;
+    if (e == null || !e.isAfter(start)) return day;
+    final last = e.subtract(const Duration(microseconds: 1));
+    return DateTime(last.year, last.month, last.day);
+  }
+
+  /// Whether the event is still on or after [today], including events that
+  /// started earlier and are still running.
+  bool isCurrentOrUpcoming(DateTime today) => !lastDay.isBefore(today);
+
   /// Whether the event can be pinned on the map.
   bool get hasCoordinates => latitude != null && longitude != null;
 }

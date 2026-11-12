@@ -47,7 +47,7 @@ class _ClubsViewState extends State<ClubsView> {
     final following = widget.followStore.clubs;
     return [
       for (final event in widget.data.events)
-        if (!event.day.isBefore(widget.today) &&
+        if (event.isCurrentOrUpcoming(widget.today) &&
             (_type == null || event.eventType == _type) &&
             (_showAll ||
                 (event.club != null && following.contains(event.club))) &&
@@ -89,8 +89,13 @@ class _ClubsViewState extends State<ClubsView> {
     final rows = <Widget>[];
     DateTime? currentDay;
     for (final event in events) {
-      if (currentDay == null || !isSameDay(currentDay, event.day)) {
-        currentDay = event.day;
+      // Events already in progress are listed under today, not the day they
+      // started.
+      final shownDay = event.day.isBefore(widget.today)
+          ? widget.today
+          : event.day;
+      if (currentDay == null || !isSameDay(currentDay, shownDay)) {
+        currentDay = shownDay;
         rows.add(_DayHeader(day: currentDay, today: widget.today));
       }
       final club = event.club;
@@ -336,7 +341,7 @@ class _ClubPickerState extends State<_ClubPicker> {
     final counts = <String, int>{};
     for (final event in widget.data.events) {
       final club = event.club;
-      if (club == null || event.day.isBefore(widget.today)) continue;
+      if (club == null || !event.isCurrentOrUpcoming(widget.today)) continue;
       counts[club] = (counts[club] ?? 0) + 1;
     }
     return counts;

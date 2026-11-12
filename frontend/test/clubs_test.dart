@@ -14,6 +14,7 @@ Map<String, dynamic> _clubEvent(
   String type,
   String startUtc, {
   String? endUtc,
+  bool allDay = false,
   String? club,
   String? location,
   String? venue,
@@ -25,7 +26,7 @@ Map<String, dynamic> _clubEvent(
   'title': title,
   'start': startUtc,
   'end': endUtc,
-  'all_day': false,
+  'all_day': allDay,
   'event_type': type,
   'club': club,
   'club_acronym': club,
@@ -220,6 +221,9 @@ void main() {
             '2026-11-05T17:00:00Z',
             endUtc: '2026-11-07T17:00:00Z',
             club: 'Chess Club',
+            place: 'Coates Hall',
+            latitude: 30.4132,
+            longitude: -91.1791,
           ),
           // Started Wednesday, ended Thursday: over.
           _clubEvent(
@@ -236,8 +240,9 @@ void main() {
       final api = _FakeApi(
         clubResult: () async => ClubEventsData.fromJson(json),
       );
-      await _pump(tester, api: api);
+      await _pump(tester, api: api, follows: MemoryFollowStore(['Chess Club']));
       await _openClubs(tester);
+      expect(find.text('Fall Retreat'), findsOneWidget);
       await _browseAll(tester);
 
       expect(find.text('Fall Retreat'), findsOneWidget);
@@ -245,11 +250,77 @@ void main() {
       // Grouped under today rather than the day it started.
       expect(find.textContaining('Today ·'), findsOneWidget);
 
+      await tester.tap(find.byTooltip('Show map'));
+      await tester.pumpAndSettle();
+      final map = tester.widget<ClubsMapView>(find.byType(ClubsMapView));
+      expect(map.events.map((event) => event.title), contains('Fall Retreat'));
+      expect(find.textContaining('2 on the map'), findsOneWidget);
+      await tester.tap(find.byTooltip('Show list'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.byTooltip('Follow clubs'));
       await tester.pumpAndSettle();
       // Chess Club: the retreat plus the Nov 10 meeting.
       expect(find.text('2 upcoming events'), findsOneWidget);
     });
+  });
+
+  testWidgets('all-day dates work with ongoing-event filtering', (
+    tester,
+  ) async {
+    final json = {
+      ..._clubJson,
+      'events': [
+        _clubEvent(
+          'expired',
+          'Finished all-day event',
+          'Social',
+          '2026-11-04T00:00:00Z',
+          endUtc: '2026-11-06T00:00:00Z',
+          allDay: true,
+          club: 'Chess Club',
+        ),
+        _clubEvent(
+          'ongoing',
+          'All-day retreat',
+          'Social',
+          '2026-11-05T00:00:00Z',
+          endUtc: '2026-11-07T00:00:00Z',
+          allDay: true,
+          club: 'Chess Club',
+        ),
+        _clubEvent(
+          'today',
+          'All-day meetup',
+          'Social',
+          '2026-11-06T00:00:00Z',
+          endUtc: '2026-11-07T00:00:00Z',
+          allDay: true,
+          club: 'Chess Club',
+        ),
+      ],
+    };
+    await _pump(
+      tester,
+      api: _FakeApi(clubResult: () async => ClubEventsData.fromJson(json)),
+      follows: MemoryFollowStore(['Chess Club']),
+    );
+    await _openClubs(tester);
+    expect(find.text('Finished all-day event'), findsNothing);
+    expect(find.text('All-day retreat'), findsOneWidget);
+    expect(find.text('All-day meetup'), findsOneWidget);
+    expect(find.textContaining('Today ·'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Follow clubs'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 upcoming events'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('All-day meetup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Friday, November 6, 2026'), findsOneWidget);
+    expect(find.text('All day'), findsOneWidget);
   });
 
   testWidgets('clubs load lazily and prompt to follow when none are followed', (

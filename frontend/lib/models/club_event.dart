@@ -19,27 +19,38 @@ class ClubEvent {
     this.tags = const [],
   });
 
-  factory ClubEvent.fromJson(Map<String, dynamic> json) => ClubEvent(
-    id: json['id'] as String,
-    title: json['title'] as String,
-    description: json['description'] as String?,
-    // The backend sends UTC; show it in the device's local time.
-    start: DateTime.parse(json['start'] as String).toLocal(),
-    end: json['end'] == null
-        ? null
-        : DateTime.parse(json['end'] as String).toLocal(),
-    allDay: json['all_day'] as bool? ?? false,
-    location: json['location'] as String?,
-    venue: json['venue'] as String?,
-    place: json['place'] as String?,
-    latitude: (json['latitude'] as num?)?.toDouble(),
-    longitude: (json['longitude'] as num?)?.toDouble(),
-    url: json['url'] as String?,
-    club: json['club'] as String?,
-    clubAcronym: json['club_acronym'] as String?,
-    eventType: json['event_type'] as String?,
-    tags: [for (final tag in json['tags'] as List? ?? []) tag as String],
-  );
+  factory ClubEvent.fromJson(Map<String, dynamic> json) {
+    final allDay = json['all_day'] as bool? ?? false;
+
+    DateTime parseDate(String value) {
+      final parsed = DateTime.parse(value);
+      // All-day iCalendar dates are encoded by the backend at UTC midnight.
+      // Preserve those calendar components; only timed events represent
+      // instants that should shift into the device's local time zone.
+      return allDay
+          ? DateTime(parsed.year, parsed.month, parsed.day)
+          : parsed.toLocal();
+    }
+
+    return ClubEvent(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      start: parseDate(json['start'] as String),
+      end: json['end'] == null ? null : parseDate(json['end'] as String),
+      allDay: allDay,
+      location: json['location'] as String?,
+      venue: json['venue'] as String?,
+      place: json['place'] as String?,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      url: json['url'] as String?,
+      club: json['club'] as String?,
+      clubAcronym: json['club_acronym'] as String?,
+      eventType: json['event_type'] as String?,
+      tags: [for (final tag in json['tags'] as List? ?? []) tag as String],
+    );
+  }
 
   final String id;
   final String title;

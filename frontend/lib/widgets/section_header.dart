@@ -12,12 +12,13 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: sectionGray,
+      color: sectionBackground,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         title,
+        // Corporate Purple on Light Gold is an LSU-approved pairing.
         style: Theme.of(context).textTheme.titleSmall
-            ?.copyWith(color: lsuPurple, fontWeight: FontWeight.w600),
+            ?.copyWith(color: corporatePurple, fontWeight: FontWeight.w700),
       ),
     );
   }

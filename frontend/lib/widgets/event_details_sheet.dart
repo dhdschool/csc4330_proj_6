@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/calendar_event.dart';
+import '../theme.dart';
 import '../utils/date_format.dart';
 import 'event_tile.dart';
 
@@ -43,7 +44,7 @@ class EventDetailsSheet extends StatelessWidget {
                     Text(
                       event.category.label.toUpperCase(),
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: event.category.color,
+                        color: lsuPurple,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1,
                       ),

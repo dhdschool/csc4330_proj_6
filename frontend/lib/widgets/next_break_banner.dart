@@ -70,14 +70,14 @@ class NextBreakBanner extends StatelessWidget {
                     Text(
                       formatDateRange(start, end),
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.white70,
+                        color: lightGold,
                       ),
                     ),
                     if (holiday.classesEndAt != null)
                       Text(
                         'Classes end at ${formatTime(holiday.classesEndAt!)}',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
+                          color: lightGold,
                         ),
                       ),
                   ],
@@ -97,7 +97,7 @@ class NextBreakBanner extends StatelessWidget {
                     Text(
                       daysAway == 1 ? 'day to go' : 'days to go',
                       style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white70,
+                        color: lightGold,
                       ),
                     ),
                 ],

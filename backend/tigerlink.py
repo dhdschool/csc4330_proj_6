@@ -100,12 +100,42 @@ class _Property:
     value: str
 
 
+def _split_unquoted(text: str, separator: str) -> list[str]:
+    """Splits on a separator, ignoring it inside double quotes.
+
+    RFC 5545 lets quoted parameter values contain ":" and ";", as in
+    ORGANIZER;CN="LSU: Robotics":mailto:...
+    """
+    parts: list[str] = []
+    start = 0
+    quoted = False
+    for i, char in enumerate(text):
+        if char == '"':
+            quoted = not quoted
+        elif char == separator and not quoted:
+            parts.append(text[start:i])
+            start = i + 1
+    parts.append(text[start:])
+    return parts
+
+
+def _value_marker(line: str) -> int:
+    """The index of the ":" that starts the value, or -1 if there is none."""
+    quoted = False
+    for i, char in enumerate(line):
+        if char == '"':
+            quoted = not quoted
+        elif char == ":" and not quoted:
+            return i
+    return -1
+
+
 def _parse_line(line: str) -> _Property | None:
-    marker = line.find(":")
+    marker = _value_marker(line)
     if marker == -1:
         return None
     name_and_params, value = line[:marker], line[marker + 1 :]
-    name, *param_parts = name_and_params.split(";")
+    name, *param_parts = _split_unquoted(name_and_params, ";")
     params = {}
     for part in param_parts:
         key, _, val = part.partition("=")

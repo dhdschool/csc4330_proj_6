@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/club_event.dart';
 import '../utils/date_format.dart';
+import '../theme.dart';
 import 'campus_map.dart';
 
 /// Maps a TigerLink event type to an icon and color. Unknown types fall back
@@ -15,7 +16,7 @@ import 'campus_map.dart';
   'Workshop' => (icon: Icons.build, color: Color(0xFF00897B)),
   'Informational' => (icon: Icons.info, color: Color(0xFF3949AB)),
   'Office Drop-ins' => (icon: Icons.meeting_room, color: Color(0xFF6D4C41)),
-  'Fundraiser' => (icon: Icons.attach_money, color: Color(0xFFE0A800)),
+  'Fundraiser' => (icon: Icons.attach_money, color: corporateGold),
   _ => (icon: Icons.event, color: Color(0xFFEF6C00)),
 };
 
@@ -171,7 +172,7 @@ class _ClubEventDetails extends StatelessWidget {
                       Text(
                         event.eventType!,
                         style: TextStyle(
-                          color: style.color,
+                          color: lsuPurple,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -235,7 +236,8 @@ class _LocationSection extends StatelessWidget {
     final place = event.place;
     // Show the building name too when the venue text doesn't already say it,
     // e.g. "Tchopitoulas Room" is in the LSU Student Union.
-    final showPlace = place != null &&
+    final showPlace =
+        place != null &&
         venue != null &&
         !venue.toLowerCase().contains(place.toLowerCase());
 

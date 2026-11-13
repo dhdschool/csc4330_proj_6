@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
 /// Mirrors the `category` values the backend returns.
 enum EventCategory {
-  holiday('Holiday', Icons.beach_access, Color(0xFFE0A800)),
+  holiday('Holiday', Icons.beach_access, corporateGold),
   classes('Classes', Icons.school, Color(0xFF461D7C)),
   exam('Exams', Icons.edit_note, Color(0xFFC62828)),
   deadline('Deadline', Icons.alarm, Color(0xFFEF6C00)),

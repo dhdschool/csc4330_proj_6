@@ -265,17 +265,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final filtered = _hiddenCategories.isNotEmpty;
+    final refreshing = _tab == _clubsTab
+        ? _clubLoading && _clubData != null
+        : _loading && _data != null;
 
     return Scaffold(
+      // A single purple bar naming the screen. Text only: LSU allows icons
+      // for utility, never as a logo.
       appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.calendar_month),
-            SizedBox(width: 10),
-            Text('LSU Calendar'),
-          ],
-        ),
+        title: Text(_screenTitles[_tab].toUpperCase()),
         actions: [
           // The category filter only applies to the academic calendar tabs.
           if (_tab == 0 || _tab == 1)
@@ -298,11 +296,16 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: const Icon(Icons.refresh),
           ),
         ],
-        bottom: _ScreenTitleBar(
-          title: _screenTitles[_tab],
-          loading: _tab == _clubsTab
-              ? _clubLoading && _clubData != null
-              : _loading && _data != null,
+        // A thin gold progress line while a refresh runs.
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(3),
+          child: refreshing
+              ? const LinearProgressIndicator(
+                  minHeight: 3,
+                  color: lsuGold,
+                  backgroundColor: Colors.transparent,
+                )
+              : const SizedBox(height: 3),
         ),
       ),
       body: _buildBody(),
@@ -504,57 +507,6 @@ class _ErrorView extends StatelessWidget {
                 label: const Text('Try again'),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The purple bar under the app bar that names the current screen, with a
-/// thin progress line while a refresh runs.
-class _ScreenTitleBar extends StatelessWidget implements PreferredSizeWidget {
-  const _ScreenTitleBar({required this.title, required this.loading});
-
-  final String title;
-  final bool loading;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(44);
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: lsuPurple,
-      child: SizedBox(
-        height: 44,
-        child: Stack(
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            if (loading)
-              const Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: LinearProgressIndicator(
-                  minHeight: 3,
-                  color: lsuGold,
-                  backgroundColor: Colors.transparent,
-                ),
-              ),
           ],
         ),
       ),

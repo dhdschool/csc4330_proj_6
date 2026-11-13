@@ -80,6 +80,13 @@ jobs:
       - name: ✅ Run tests
         run: flutter test --coverage
 
+      - name: 🧪 Test NDK installation recovery
+        run: bash ../.github/scripts/test-install-android-ndk.sh
+
+      - name: 📥 Install Android NDK
+        timeout-minutes: 15
+        run: bash ../.github/scripts/install-android-ndk.sh
+
       - name: 🏗️ Build APK
         # Set a repo variable BACKEND_URL (Settings → Secrets and variables → Actions → Variables)
         # to your deployed backend. The default only works on the Android emulator.

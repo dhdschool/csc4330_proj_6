@@ -314,8 +314,8 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// A searchable list of every club in the feed, with a follow toggle and a
-/// count of each club's upcoming events.
+/// A searchable list of feed clubs and saved follows, so clubs with no events
+/// can still be unfollowed. Each row shows its upcoming-event count.
 class _ClubPicker extends StatefulWidget {
   const _ClubPicker({
     required this.data,
@@ -355,10 +355,21 @@ class _ClubPickerState extends State<_ClubPicker> {
 
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.followStore,
+      builder: (context, _) => _buildContent(context),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
     final theme = Theme.of(context);
     final query = _search.trim().toLowerCase();
+    final allClubs = {
+      ...widget.data.clubs,
+      ...widget.followStore.clubs,
+    }.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final clubs = [
-      for (final club in widget.data.clubs)
+      for (final club in allClubs)
         if (query.isEmpty || club.toLowerCase().contains(query)) club,
     ];
 
@@ -382,51 +393,48 @@ class _ClubPickerState extends State<_ClubPicker> {
                 onChanged: (value) => setState(() => _search = value),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'Search ${widget.data.clubs.length} clubs',
+                  hintText: 'Search ${allClubs.length} clubs',
                   prefixIcon: const Icon(Icons.search),
                   border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),
               Flexible(
-                child: AnimatedBuilder(
-                  animation: widget.followStore,
-                  builder: (context, _) => clubs.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text('No clubs match your search.'),
-                        )
-                      : ListView.builder(
-                          itemCount: clubs.length,
-                          itemBuilder: (context, index) {
-                            final club = clubs[index];
-                            final following = widget.followStore.isFollowing(
-                              club,
-                            );
-                            final count = _upcomingByClub[club] ?? 0;
-                            return ListTile(
-                              title: Text(club),
-                              subtitle: Text(
-                                count == 1
-                                    ? '1 upcoming event'
-                                    : '$count upcoming events',
+                child: clubs.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Text('No clubs match your search.'),
+                      )
+                    : ListView.builder(
+                        itemCount: clubs.length,
+                        itemBuilder: (context, index) {
+                          final club = clubs[index];
+                          final following = widget.followStore.isFollowing(
+                            club,
+                          );
+                          final count = _upcomingByClub[club] ?? 0;
+                          return ListTile(
+                            key: ValueKey(club),
+                            title: Text(club),
+                            subtitle: Text(
+                              count == 1
+                                  ? '1 upcoming event'
+                                  : '$count upcoming events',
+                            ),
+                            trailing: IconButton(
+                              tooltip: following ? 'Unfollow' : 'Follow',
+                              icon: Icon(
+                                following ? Icons.star : Icons.star_border,
+                                color: following
+                                    ? theme.colorScheme.primary
+                                    : null,
                               ),
-                              trailing: IconButton(
-                                tooltip: following ? 'Unfollow' : 'Follow',
-                                icon: Icon(
-                                  following ? Icons.star : Icons.star_border,
-                                  color: following
-                                      ? theme.colorScheme.primary
-                                      : null,
-                                ),
-                                onPressed: () =>
-                                    widget.followStore.toggle(club),
-                              ),
-                              onTap: () => widget.followStore.toggle(club),
-                            );
-                          },
-                        ),
-                ),
+                              onPressed: () => widget.followStore.toggle(club),
+                            ),
+                            onTap: () => widget.followStore.toggle(club),
+                          );
+                        },
+                      ),
               ),
             ],
           ),

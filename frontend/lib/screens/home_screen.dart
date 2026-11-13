@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/models/moodle_event.dart';
+import 'package:provider/provider.dart';
 
 import '../models/calendar_event.dart';
 import '../models/club_event.dart';
 import '../services/calendar_api.dart';
 import '../services/followed_clubs.dart';
+import '../services/moodle_api.dart';
 import '../theme.dart';
 import '../utils/date_format.dart';
 import '../widgets/next_break_banner.dart';
 import 'agenda_view.dart';
 import 'calendar_view.dart';
 import 'clubs_view.dart';
+import 'moodle_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.repository,
     this.clubRepository,
+    required this.moodleService,
     this.followStore,
     this.clock,
   });
@@ -25,6 +30,8 @@ class HomeScreen extends StatefulWidget {
   /// Club events load from here. Null leaves the Clubs tab unavailable, which
   /// keeps the widget tests that only exercise the academic calendar simple.
   final ClubRepository? clubRepository;
+
+  final MoodleService moodleService;
 
   /// Which clubs the user follows. Defaults to a non-persistent store when the
   /// app doesn't supply one.
@@ -50,12 +57,18 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _clubLoading = false;
   bool _clubsRequested = false;
 
+  String? _moodleError;
+  bool _moodleLoading = false;
+  IsAuthorizedResponse? _moodleAuthorized;
+  bool _moodleRequested = false;
+
   // Falls back to an in-memory store when the app doesn't provide one.
   late final FollowStore _followStore =
       widget.followStore ?? MemoryFollowStore();
 
   static const _clubsTab = 2;
-  static const _screenTitles = ['Academic Calendar', 'Agenda', 'Club Events'];
+  static const _moodleTab = 3;
+  static const _screenTitles = ['Academic Calendar', 'Agenda', 'Club Events', 'Moodle Login'];
 
   late DateTime _today = dateOnly((widget.clock ?? DateTime.now)());
   late DateTime _focusedMonth = DateTime(_today.year, _today.month);
@@ -65,6 +78,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    widget.moodleService.addListener(_moodleListener);
+  }
+
+  @override
+  void dispose(){
+    widget.moodleService.removeListener(_moodleListener);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -124,10 +144,51 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadMoodle() async {
+    setState(() {
+      _moodleLoading = true;
+      _moodleRequested = true;
+    }); 
+    
+    try {
+      final IsAuthorizedResponse loggedIn = await widget.moodleService.isAuthorized();
+      if(!mounted) return;
+      setState(() {
+        _moodleError = null;
+        _moodleAuthorized = loggedIn;
+      });
+
+    } catch (e) {
+      if(!mounted) return;
+      final message = e is MoodleApiException
+        ? e.message
+        : 'Failed to parse moodle response $e';
+      setState(() => _moodleError = message);
+      if(_moodleAuthorized == null){
+        ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _moodleLoading = false);
+    }
+
+  }
+
+  Future<void> _moodleListener() async {
+    setState(() {
+      _moodleLoading = true;
+      _moodleAuthorized = null;
+      _moodleError = null;
+    });
+
+    await _loadMoodle();
+  }
+
   void _onTabSelected(int index) {
     setState(() => _tab = index);
     // Fetch club events the first time the tab is opened, not at startup.
     if (index == _clubsTab && !_clubsRequested) _loadClubs();
+    if (index == _moodleTab && !_moodleRequested) _loadMoodle();
   }
 
   bool _isVisible(CalendarEvent event) =>
@@ -264,6 +325,11 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon: Icon(Icons.groups),
             label: 'Clubs',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.web_outlined),
+            selectedIcon: Icon(Icons.web),
+            label: 'Moodle'
+          )
         ],
       ),
     );
@@ -271,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     if (_tab == _clubsTab) return _buildClubsBody();
-
+    if (_tab == _moodleTab) return _buildMoodleBody();
     final data = _data;
     if (data == null) {
       if (_loading) {
@@ -339,6 +405,34 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildMoodleBody(){
+    if (_moodleAuthorized == null){
+      if(_moodleLoading){
+        return const Center(child: CircularProgressIndicator());
+      }
+      return _ErrorView(message: _moodleError ?? "Unable to verify Moodle authorization", onRetry: _loadMoodle);
+    }
+
+    if (_moodleAuthorized!.authorized){
+      return Center(
+        child: Column(
+          mainAxisAlignment: .center,
+          children: [
+            Icon(Icons.thumb_up_outlined),
+            Text("You're Connected"),
+            Text("When your Moodle events update, they'll be reflected in your calendar")
+          ] 
+        )
+      );
+    } else {
+      
+      return ChangeNotifierProvider.value(
+        value: widget.moodleService,
+        child: MoodleView(loginUrl: Uri.parse(_moodleAuthorized!.loginUrl!))
+      );
+    }
   }
 }
 

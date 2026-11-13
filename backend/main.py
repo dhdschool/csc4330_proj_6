@@ -19,6 +19,8 @@ from tigerlink import (
     TigerLinkUnavailable,
 )
 
+import moodle
+
 app = FastAPI(title="LSU UniCalendar")
 # Lets the Flutter web build call the API. Everything here is public and read-only.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"])
@@ -26,6 +28,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"])
 _service = LsuCalendarService()
 _tigerlink = TigerLinkService()
 
+_login_endpoint = moodle.LoginRequest()
 
 def get_calendar_service() -> LsuCalendarService:
     return _service
@@ -44,12 +47,41 @@ class CalendarResponse(BaseModel):
     # True when the last refresh from LSU failed, so data may be old or incomplete.
     stale: bool
 
+class LoginResponse(BaseModel):
+    success: bool
+
+class LoginRequest(BaseModel):
+    token: str
+    backend_login: bool
+
+class IsAuthorizedResponse(BaseModel):
+    authorized: bool
+    login_url: str | None = None
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
+@app.get("/api/moodle/authorized")
+def moodle_is_authorized() -> IsAuthorizedResponse:
+    authorized = _login_endpoint.is_authorized()
+    url: str | None = None
+    if not authorized:
+        url = _login_endpoint.get()
+    
+    return IsAuthorizedResponse(authorized=authorized, login_url = url)
 
+@app.post("/api/moodle/login")
+def moodle_login(request: LoginRequest) -> LoginResponse:
+    moodle.moodle4_token = request.token
+    
+    if request.backend_login:
+        _login_endpoint.get(backend_login=True)
+        
+    authorized = _login_endpoint.is_authorized()
+
+    return LoginResponse(success=authorized)
+    
 @app.get("/api/lsu/calendar/events")
 async def get_calendar_events(
     service: Annotated[LsuCalendarService, Depends(get_calendar_service)],

@@ -97,7 +97,7 @@ class LoginRequest(BaseRequest):
   def __init__(self):
     super().__init__(endpoint="/login/index.php")
   
-  def get(self) -> requests.Response:
+  def get(self, backend_login=False) -> str | None:
     global moodle4_token      
     
     resp = super().get()
@@ -111,17 +111,19 @@ class LoginRequest(BaseRequest):
       redir = login_request.get({"id": "1", "wantsurl": "/", "sesskey": config["sesskey"]})
     except requests.exceptions.TooManyRedirects as e:
       logging.log(level=logging.WARNING, msg=f"Too many redirects, dumping error history: {e.response.history}")
-      exit()
+      return None
     
     headers = login_request.headers.copy()
     del headers['Host']
     
     logging.log(level=logging.INFO, msg=f"Login link: {redir.headers['Location']}")
-    asyncio.run(self.auth_login(redir.headers['Location']))
     
-    logging.log(level=logging.INFO, msg=f"Moodle 4 token: {moodle4_token}")
-    logging.log(level=logging.INFO, msg=f"Authorization successful: {self.is_authorized()}")
-      
+    if backend_login:
+      asyncio.run(self.auth_login(redir.headers['Location']))
+    
+    return redir.headers['Location'] # Return login
+   
+    
   async def auth_login(self, login_url: str):
     global moodle4_token
     

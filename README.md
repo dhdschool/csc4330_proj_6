@@ -14,6 +14,14 @@ uvicorn main:app --reload
 pytest
 ```
 
+If running flutter web, the backend additionally needs to login to moodle as there are no flutter webview for flutter web. To do this, run this from the backend folder
+
+```
+playwright install
+```
+
+When running the frontend on mobile, the frontend should be able to render the webview for IOS and Android without needing to login on the backend. 
+
 On macOS or Linux, activate with `source .venv/bin/activate`. While the server is running, interactive API docs are at http://localhost:8000/docs.
 
 ### `GET /api/lsu/calendar/events`

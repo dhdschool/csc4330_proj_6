@@ -27,6 +27,41 @@ class MoodleService extends ChangeNotifier {
 
   final WebviewCookieManager _cookieManager = WebviewCookieManager();
   String _sessionToken = "";
+  bool _signedIn = false;
+
+  /// Whether the backend holds a working Moodle session. Updated by
+  /// [isAuthorized], a successful login, and [signOut]. Listeners are notified
+  /// when a login succeeds or the user signs out.
+  bool get signedIn => _signedIn;
+
+  /// Ends the Moodle session on the backend and forgets it on this device.
+  Future<void> signOut() async {
+    final http.Response response;
+    try {
+      response = await client.post(Uri.parse('$baseUrl/api/moodle/logout'));
+    } on Exception {
+      throw MoodleApiException(
+        "Couldn't reach the calendar server at $baseUrl.",
+      );
+    }
+    if (response.statusCode != 200) {
+      throw MoodleApiException(
+        'The calendar server returned an error (${response.statusCode}).',
+      );
+    }
+    _sessionToken = "";
+    _signedIn = false;
+    // Drop the webview's Moodle cookie so the next sign-in can be a
+    // different account.
+    if (!kIsWeb) {
+      try {
+        await _cookieManager.clearCookies();
+      } on Exception catch (error) {
+        debugPrint("Couldn't clear Moodle cookies: $error");
+      }
+    }
+    notifyListeners();
+  }
 
 
   Future<void> handleUrlChange({required String? url}) async {
@@ -75,10 +110,40 @@ class MoodleService extends ChangeNotifier {
     );
 
     if (loginResponse.success){
+      _signedIn = true;
       notifyListeners();
     }
 
     return loginResponse;
+  }
+
+  /// The user's Moodle deadlines and sessions, or null when they haven't
+  /// logged in to Moodle (or the session expired).
+  Future<MoodleEventsData?> fetchEvents() async {
+    final http.Response response;
+    try {
+      response = await client
+          .get(Uri.parse('$baseUrl/api/moodle/events'))
+          .timeout(const Duration(seconds: 60));
+    } on Exception {
+      throw MoodleApiException(
+        "Couldn't reach the calendar server at $baseUrl.",
+      );
+    }
+    if (response.statusCode == 401) return null;
+    if (response.statusCode == 503) {
+      throw MoodleApiException(
+        "Moodle's calendar is unavailable right now. Try again in a few minutes.",
+      );
+    }
+    if (response.statusCode != 200) {
+      throw MoodleApiException(
+        'The calendar server returned an error (${response.statusCode}).',
+      );
+    }
+    return MoodleEventsData.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
   }
 
   Future<IsAuthorizedResponse> isAuthorized() async {
@@ -101,8 +166,10 @@ class MoodleService extends ChangeNotifier {
         'The calendar server returned an error (${response.statusCode}).',
       );
     }
-    return IsAuthorizedResponse.fromJson(
+    final authorized = IsAuthorizedResponse.fromJson(
       jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic> 
     );
+    _signedIn = authorized.authorized;
+    return authorized;
   }
 } 

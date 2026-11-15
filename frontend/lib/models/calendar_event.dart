@@ -13,6 +13,8 @@ enum EventCategory {
   studyPeriod('Study Period', Icons.menu_book, Color(0xFF5E35B1)),
   orientation('Orientation', Icons.waving_hand, Color(0xFF43A047)),
   commencement('Commencement', Icons.celebration, Color(0xFFD81B60)),
+  // Due dates and sessions from the user's own Moodle courses.
+  moodle('Moodle', Icons.assignment_outlined, Color(0xFFF98012)),
   other('Other', Icons.event, Color(0xFF757575));
 
   const EventCategory(this.label, this.icon, this.color);
@@ -31,6 +33,7 @@ enum EventCategory {
     'study_period' => studyPeriod,
     'orientation' => orientation,
     'commencement' => commencement,
+    'moodle' => moodle,
     _ => other,
   };
 }
@@ -49,6 +52,8 @@ class CalendarEvent {
     this.tentative = false,
     this.classesEndAt,
     this.classesResumeAt,
+    this.startTime,
+    this.endTime,
   });
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) => CalendarEvent(
@@ -84,6 +89,11 @@ class CalendarEvent {
   /// 24-hour local times, such as "16:30", for holidays covering part of a day.
   final String? classesEndAt;
   final String? classesResumeAt;
+
+  /// 24-hour local times, such as "23:59", for events at a set time of day
+  /// (Moodle deadlines and sessions). Null for all-day events.
+  final String? startTime;
+  final String? endTime;
 
   bool get isScheduled => startDate != null;
 

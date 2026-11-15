@@ -37,8 +37,11 @@ class EventTile extends StatelessWidget {
       event.isScheduled
           ? formatDateRange(event.startDate!, event.endDate!)
           : event.dateText,
+      if (event.startTime != null) formatEventTime(event),
       if (event.classesEndAt != null)
         'Classes end ${formatTime(event.classesEndAt!)}',
+      if (event.category == EventCategory.moodle && event.terms.isNotEmpty)
+        event.terms.first,
     ].join(' · ');
 
     // A flat list row with a divider, rather than a card.
@@ -89,6 +92,13 @@ class EventTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// "11:59 PM" or "9:00 AM – 10:20 AM" for events with a time of day.
+String formatEventTime(CalendarEvent event) {
+  final start = formatTime(event.startTime!);
+  final end = event.endTime;
+  return end == null ? start : '$start – ${formatTime(end)}';
 }
 
 class TentativeChip extends StatelessWidget {

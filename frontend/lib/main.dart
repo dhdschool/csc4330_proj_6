@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/services/moodle_api.dart';
 import 'package:http/http.dart' as http;
 
+import 'screens/auth_gate.dart';
 import 'screens/home_screen.dart';
 import 'services/calendar_api.dart';
 import 'services/followed_clubs.dart';
@@ -47,12 +48,17 @@ class LsuCalendarApp extends StatelessWidget {
       theme: buildTheme(),
       // Always light, even when the device is in dark mode.
       themeMode: ThemeMode.light,
-      home: HomeScreen(
-        repository: repository,
-        clubRepository: clubRepository,
+      // Opens to the Moodle sign-in screen unless already signed in.
+      home: AuthGate(
         moodleService: moodleService,
-        followStore: followStore,
-        clock: clock,
+        homeBuilder: (context, requestSignIn) => HomeScreen(
+          repository: repository,
+          clubRepository: clubRepository,
+          moodleService: moodleService,
+          followStore: followStore,
+          clock: clock,
+          onSignInRequested: requestSignIn,
+        ),
       ),
     );
   }

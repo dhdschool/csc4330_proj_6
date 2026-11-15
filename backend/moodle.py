@@ -184,6 +184,16 @@ class LoginRequest(BaseRequest):
     else:
       return False
   
+def logout() -> None:
+  """Forgets the Moodle session, including the copy saved in moodle.env."""
+  global moodle4_token
+  moodle4_token = ""
+  os.environ.pop("moodle4_token_default", None)
+  try:
+    os.remove(ENV_FP)
+  except FileNotFoundError:
+    pass
+
 class AuthRequest(BaseRequest):
   def __init__(self, endpoint: str, headers: dict[str, str] = {}, cookies: dict[str, str] = {}, use_post_form: bool = False):
     super().__init__(endpoint=endpoint, headers=headers, cookies=cookies, allow_redirects=True, use_post_form=use_post_form)

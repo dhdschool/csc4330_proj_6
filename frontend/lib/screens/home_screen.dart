@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:frontend/models/moodle_event.dart';
-import 'package:provider/provider.dart';
 
 import '../models/calendar_event.dart';
 import '../models/club_event.dart';
@@ -13,7 +14,6 @@ import '../widgets/next_break_banner.dart';
 import 'agenda_view.dart';
 import 'calendar_view.dart';
 import 'clubs_view.dart';
-import 'moodle_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -23,6 +23,7 @@ class HomeScreen extends StatefulWidget {
     required this.moodleService,
     this.followStore,
     this.clock,
+    this.onSignInRequested,
   });
 
   final CalendarRepository repository;
@@ -39,6 +40,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Overridable so tests can pin "today".
   final DateTime Function()? clock;
+
+  /// Opens the Moodle sign-in screen, for users who skipped it at launch.
+  final VoidCallback? onSignInRequested;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -57,18 +61,16 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _clubLoading = false;
   bool _clubsRequested = false;
 
-  String? _moodleError;
-  bool _moodleLoading = false;
-  IsAuthorizedResponse? _moodleAuthorized;
-  bool _moodleRequested = false;
+  // Deadlines and sessions from the user's Moodle courses, shown alongside the
+  // academic calendar. Empty until they log in to Moodle.
+  List<CalendarEvent> _moodleEvents = const [];
 
   // Falls back to an in-memory store when the app doesn't provide one.
   late final FollowStore _followStore =
       widget.followStore ?? MemoryFollowStore();
 
   static const _clubsTab = 2;
-  static const _moodleTab = 3;
-  static const _screenTitles = ['Academic Calendar', 'Agenda', 'Club Events', 'Moodle Login'];
+  static const _screenTitles = ['Academic Calendar', 'Agenda', 'Club Events'];
 
   late DateTime _today = dateOnly((widget.clock ?? DateTime.now)());
   late DateTime _focusedMonth = DateTime(_today.year, _today.month);
@@ -92,6 +94,8 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = true;
       _today = dateOnly((widget.clock ?? DateTime.now)());
     });
+    // Runs alongside the academic calendar; it never blocks or fails it.
+    unawaited(_loadMoodleEvents());
     try {
       final data = await widget.repository.fetchCalendar();
       if (!mounted) return;
@@ -113,6 +117,47 @@ class _HomeScreenState extends State<HomeScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadMoodleEvents() async {
+    try {
+      final data = await widget.moodleService.fetchEvents();
+      if (!mounted) return;
+      setState(() {
+        _moodleEvents = [
+          for (final event in data?.events ?? const <MoodleEvent>[])
+            event.toCalendarEvent(),
+        ];
+      });
+    } on Exception catch (error) {
+      // Moodle is optional, so keep whatever we showed last.
+      debugPrint('Moodle events not loaded: $error');
+    }
+  }
+
+  /// Merges Moodle events into the academic calendar by date and time. Both
+  /// lists are already sorted; on ties the academic event comes first.
+  List<CalendarEvent> _withMoodleEvents(List<CalendarEvent> academic) {
+    if (_moodleEvents.isEmpty) return academic;
+    int compare(CalendarEvent a, CalendarEvent b) {
+      final byDate = a.startDate!.compareTo(b.startDate!);
+      return byDate != 0
+          ? byDate
+          : (a.startTime ?? '').compareTo(b.startTime ?? '');
+    }
+
+    final merged = <CalendarEvent>[];
+    var i = 0, j = 0;
+    while (i < academic.length && j < _moodleEvents.length) {
+      merged.add(
+        compare(_moodleEvents[j], academic[i]) < 0
+            ? _moodleEvents[j++]
+            : academic[i++],
+      );
+    }
+    return merged
+      ..addAll(academic.skip(i))
+      ..addAll(_moodleEvents.skip(j));
   }
 
   Future<void> _loadClubs() async {
@@ -144,51 +189,28 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadMoodle() async {
-    setState(() {
-      _moodleLoading = true;
-      _moodleRequested = true;
-    }); 
-    
-    try {
-      final IsAuthorizedResponse loggedIn = await widget.moodleService.isAuthorized();
-      if(!mounted) return;
-      setState(() {
-        _moodleError = null;
-        _moodleAuthorized = loggedIn;
-      });
-
-    } catch (e) {
-      if(!mounted) return;
-      final message = e is MoodleApiException
-        ? e.message
-        : 'Failed to parse moodle response $e';
-      setState(() => _moodleError = message);
-      if(_moodleAuthorized == null){
-        ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
-      }
-    } finally {
-      if (mounted) setState(() => _moodleLoading = false);
+  void _moodleListener() {
+    if (widget.moodleService.signedIn) {
+      _loadMoodleEvents();
+    } else {
+      setState(() => _moodleEvents = const []);
     }
-
   }
 
-  Future<void> _moodleListener() async {
-    setState(() {
-      _moodleLoading = true;
-      _moodleAuthorized = null;
-      _moodleError = null;
-    });
-
-    await _loadMoodle();
+  Future<void> _signOut() async {
+    try {
+      await widget.moodleService.signOut();
+    } on MoodleApiException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   void _onTabSelected(int index) {
     setState(() => _tab = index);
     // Fetch club events the first time the tab is opened, not at startup.
     if (index == _clubsTab && !_clubsRequested) _loadClubs();
-    if (index == _moodleTab && !_moodleRequested) _loadMoodle();
   }
 
   bool _isVisible(CalendarEvent event) =>
@@ -295,6 +317,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 : _load,
             icon: const Icon(Icons.refresh),
           ),
+          if (widget.moodleService.signedIn || widget.onSignInRequested != null)
+            PopupMenuButton<void>(
+              tooltip: 'Moodle account',
+              icon: Icon(
+                widget.moodleService.signedIn
+                    ? Icons.account_circle
+                    : Icons.account_circle_outlined,
+              ),
+              itemBuilder: (context) => [
+                if (widget.moodleService.signedIn)
+                  PopupMenuItem(
+                    onTap: _signOut,
+                    child: const ListTile(
+                      leading: Icon(Icons.logout),
+                      title: Text('Sign out of Moodle'),
+                    ),
+                  )
+                else
+                  PopupMenuItem(
+                    onTap: widget.onSignInRequested,
+                    child: const ListTile(
+                      leading: Icon(Icons.login),
+                      title: Text('Sign in with Moodle'),
+                    ),
+                  ),
+              ],
+            ),
         ],
         // A thin gold progress line while a refresh runs.
         bottom: PreferredSize(
@@ -328,11 +377,6 @@ class _HomeScreenState extends State<HomeScreen> {
             selectedIcon: Icon(Icons.groups),
             label: 'Clubs',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.web_outlined),
-            selectedIcon: Icon(Icons.web),
-            label: 'Moodle'
-          )
         ],
       ),
     );
@@ -340,7 +384,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     if (_tab == _clubsTab) return _buildClubsBody();
-    if (_tab == _moodleTab) return _buildMoodleBody();
     final data = _data;
     if (data == null) {
       if (_loading) {
@@ -349,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return _ErrorView(message: _error!, onRetry: _load);
     }
 
-    final events = data.events.where(_isVisible).toList();
+    final events = _withMoodleEvents(data.events).where(_isVisible).toList();
     final view = _tab == 0
         ? CalendarView(
             events: events,
@@ -408,34 +451,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ],
     );
-  }
-
-  Widget _buildMoodleBody(){
-    if (_moodleAuthorized == null){
-      if(_moodleLoading){
-        return const Center(child: CircularProgressIndicator());
-      }
-      return _ErrorView(message: _moodleError ?? "Unable to verify Moodle authorization", onRetry: _loadMoodle);
-    }
-
-    if (_moodleAuthorized!.authorized){
-      return Center(
-        child: Column(
-          mainAxisAlignment: .center,
-          children: [
-            Icon(Icons.thumb_up_outlined),
-            Text("You're Connected"),
-            Text("When your Moodle events update, they'll be reflected in your calendar")
-          ] 
-        )
-      );
-    } else {
-      
-      return ChangeNotifierProvider.value(
-        value: widget.moodleService,
-        child: MoodleView(loginUrl: Uri.parse(_moodleAuthorized!.loginUrl!))
-      );
-    }
   }
 }
 

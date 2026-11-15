@@ -20,18 +20,35 @@ from tigerlink import (
 )
 
 import moodle
+from moodle_calendar import (
+    MoodleCalendarService,
+    MoodleEvent,
+    MoodleNotAuthorized,
+    MoodleUnavailable,
+)
 
 app = FastAPI(title="LSU UniCalendar")
-# Lets the Flutter web build call the API. Everything here is public and read-only.
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["GET"])
+# Lets the Flutter web build call the API. POST + Content-Type are needed for the
+# JSON body sent to /api/moodle/login (the browser preflights it with OPTIONS).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 _service = LsuCalendarService()
 _tigerlink = TigerLinkService()
 
 _login_endpoint = moodle.LoginRequest()
+_moodle_calendar = MoodleCalendarService()
 
 def get_calendar_service() -> LsuCalendarService:
     return _service
+
+
+def get_moodle_calendar_service() -> MoodleCalendarService:
+    return _moodle_calendar
 
 
 def get_tigerlink_service() -> TigerLinkService:
@@ -81,7 +98,34 @@ def moodle_login(request: LoginRequest) -> LoginResponse:
     authorized = _login_endpoint.is_authorized()
 
     return LoginResponse(success=authorized)
-    
+
+
+@app.post("/api/moodle/logout")
+def moodle_logout() -> LoginResponse:
+    moodle.logout()
+    return LoginResponse(success=True)
+
+
+class MoodleEventsResponse(BaseModel):
+    events: list[MoodleEvent]
+    fetched_at: datetime
+
+
+# Sync on purpose: the Moodle client uses requests, so FastAPI runs this in a
+# worker thread instead of blocking the event loop.
+@app.get("/api/moodle/events")
+def get_moodle_events(
+    service: Annotated[MoodleCalendarService, Depends(get_moodle_calendar_service)],
+) -> MoodleEventsResponse:
+    try:
+        events, fetched_at = service.get_events()
+    except MoodleNotAuthorized as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    except MoodleUnavailable as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return MoodleEventsResponse(events=events, fetched_at=fetched_at)
+
+
 @app.get("/api/lsu/calendar/events")
 async def get_calendar_events(
     service: Annotated[LsuCalendarService, Depends(get_calendar_service)],

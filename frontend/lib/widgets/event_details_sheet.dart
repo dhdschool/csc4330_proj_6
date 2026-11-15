@@ -68,6 +68,8 @@ class EventDetailsSheet extends StatelessWidget {
                 ? formatLongDate(start)
                 : '${formatLongDate(start)}\nthrough ${formatLongDate(end)}',
           ),
+          if (event.startTime != null)
+            _DetailRow(icon: Icons.schedule, label: formatEventTime(event)),
           if (event.isMultiDay)
             _DetailRow(
               icon: Icons.timelapse,
@@ -83,11 +85,18 @@ class EventDetailsSheet extends StatelessWidget {
               icon: Icons.login,
               label: 'Classes resume at ${formatTime(event.classesResumeAt!)}',
             ),
-          _DetailRow(icon: Icons.label_outline, label: event.terms.join(', ')),
-          _DetailRow(
-            icon: Icons.account_balance,
-            label: 'Academic year ${event.academicYear}',
-          ),
+          if (event.terms.isNotEmpty)
+            _DetailRow(
+              icon: event.category == EventCategory.moodle
+                  ? Icons.class_outlined
+                  : Icons.label_outline,
+              label: event.terms.join(', '),
+            ),
+          if (event.academicYear.isNotEmpty)
+            _DetailRow(
+              icon: Icons.account_balance,
+              label: 'Academic year ${event.academicYear}',
+            ),
           if (event.description != null) ...[
             const Divider(height: 32),
             Text(event.description!, style: theme.textTheme.bodyMedium),

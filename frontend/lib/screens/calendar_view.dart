@@ -151,6 +151,7 @@ class _Legend extends StatelessWidget {
     EventCategory.deadline,
     EventCategory.grades,
     EventCategory.commencement,
+    EventCategory.moodle,
   ];
 
   @override

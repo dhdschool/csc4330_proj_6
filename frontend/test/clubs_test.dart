@@ -9,6 +9,8 @@ import 'package:frontend/services/calendar_api.dart';
 import 'package:frontend/services/followed_clubs.dart';
 import 'package:frontend/widgets/campus_map.dart';
 
+import 'fake_moodle.dart';
+
 Map<String, dynamic> _clubEvent(
   String id,
   String title,
@@ -120,6 +122,7 @@ Future<_FakeApi> _pump(
     LsuCalendarApp(
       repository: fake,
       clubRepository: fake,
+      moodleService: fakeMoodleService(),
       followStore: follows ?? MemoryFollowStore(),
       clock: () => DateTime(2026, 11, 6, 9),
     ),

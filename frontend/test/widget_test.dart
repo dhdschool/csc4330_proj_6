@@ -5,6 +5,8 @@ import 'package:frontend/main.dart';
 import 'package:frontend/models/calendar_event.dart';
 import 'package:frontend/services/calendar_api.dart';
 
+import 'fake_moodle.dart';
+
 Map<String, dynamic> _event(
   String title,
   String category,
@@ -64,6 +66,7 @@ Future<_FakeRepository> _pumpApp(
   await tester.pumpWidget(
     LsuCalendarApp(
       repository: repository,
+      moodleService: fakeMoodleService(),
       clock: () => DateTime(2026, 11, 3, 9, 30),
     ),
   );

@@ -79,6 +79,11 @@ jobs:
 
       - name: ✅ Run tests
         run: flutter test --coverage
+        env:
+          # Run in Baton Rouge's time zone. GitHub runners default to UTC,
+          # where UTC-vs-local date bugs (like all-day events landing on
+          # the previous day) can't show up.
+          TZ: America/Chicago
 
       - name: 🧪 Test NDK installation recovery
         run: bash ../.github/scripts/test-install-android-ndk.sh

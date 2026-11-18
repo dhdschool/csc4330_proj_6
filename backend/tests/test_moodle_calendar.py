@@ -3,8 +3,9 @@ from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from main import app, get_moodle_calendar_service
+from main import app, get_moodle_calendar_service, get_session_store
 from moodle_calendar import MoodleNotAuthorized, MoodleUnavailable, parse_moodle_ics
+from moodle_sessions import SessionStore
 
 SAMPLE = (
     "BEGIN:VCALENDAR\r\n"
@@ -69,17 +70,27 @@ class FakeService:
     def __init__(self, error=None):
         self.error = error
 
-    def get_events(self):
+    def get_events(self, token):
         if self.error:
             raise self.error
         return parse_moodle_ics(SAMPLE), datetime(2026, 11, 15, tzinfo=timezone.utc)
 
+    def forget(self, token):
+        pass
+
 
 @pytest.fixture
 def client_with():
+    """A client already signed in to Moodle, served by the given service."""
+
     def make(service):
+        sessions = SessionStore(path=None)
+        session_id = sessions.create("moodle-cookie")
         app.dependency_overrides[get_moodle_calendar_service] = lambda: service
-        return TestClient(app)
+        app.dependency_overrides[get_session_store] = lambda: sessions
+        client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {session_id}"
+        return client
 
     yield make
     app.dependency_overrides.clear()

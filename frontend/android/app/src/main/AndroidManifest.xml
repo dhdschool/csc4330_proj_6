@@ -1,12 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Needed to fetch the calendar from the backend. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- usesCleartextTraffic allows the http:// dev backend; remove it once BACKEND_URL is https. -->
+    <!-- network_security_config limits plain http:// to the local dev backend
+         in release builds; debug builds allow any http:// backend. -->
     <application
         android:label="LSU Calendar"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -24,6 +24,14 @@ When running the frontend on mobile, the frontend should be able to render the w
 
 On macOS or Linux, activate with `source .venv/bin/activate`. While the server is running, interactive API docs are at http://localhost:8000/docs.
 
+### Moodle sign-in
+
+Each person who signs in gets their own session: `POST /api/moodle/login` returns a random `session` ID, and the app sends it back as `Authorization: Bearer <session>` on the other `/api/moodle/*` routes. Without a valid ID, `/api/moodle/events` returns 401, so one user can never see another's Moodle data. Sessions are saved to `backend/moodle_sessions.json` (gitignored; it holds live Moodle cookies) so people stay signed in when the backend restarts. Set `MOODLE_SESSIONS_FILE` to store it elsewhere.
+
+The web build's sign-in, where the backend opens its own browser window, only accepts requests from the same computer, and only one at a time. On a deployed server, set `MOODLE_BROWSER_LOGIN=0` to turn it off completely.
+
+Because the app sends a Moodle session to the backend, a deployed backend must use `https://`. Android release builds only allow plain `http://` to the local development addresses (`10.0.2.2`, `localhost`, `127.0.0.1`); debug builds allow any `http://` address for testing on a phone.
+
 ### `GET /api/lsu/calendar/events`
 
 Returns the LSU academic calendar, scraped from the [Registrar's pages](https://www.lsu.edu/registrar/academics/academic-calendars/index.php) and cached in memory for 24 hours.

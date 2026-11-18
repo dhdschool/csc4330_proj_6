@@ -87,62 +87,73 @@ def _build_event(props) -> MoodleEvent | None:
     return MoodleEvent(**fields)
 
 
+class _UserCache:
+    """One user's export link and most recent events."""
+
+    def __init__(self) -> None:
+        # Per user, so one person's slow Moodle doesn't hold up everyone else.
+        self.lock = threading.Lock()
+        self.export_url: str | None = None
+        self.events: list[MoodleEvent] | None = None
+        self.fetched_at: datetime | None = None
+        self.fetched_monotonic = 0.0
+
+
 class MoodleCalendarService:
-    """Fetches and caches the logged-in user's Moodle events."""
+    """Fetches and caches each user's Moodle events, keyed by their session."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._export_url: str | None = None
-        self._url_token: str | None = None  # session the URL was made with
-        self._events: list[MoodleEvent] | None = None
-        self._fetched_at: datetime | None = None
-        self._fetched_monotonic = 0.0
+        self._caches: dict[str, _UserCache] = {}
 
-    def get_events(self) -> tuple[list[MoodleEvent], datetime]:
+    def get_events(self, token: str) -> tuple[list[MoodleEvent], datetime]:
+        """The events for the user signed in with this Moodle session token."""
+        if not token:
+            raise MoodleNotAuthorized("Log in to Moodle first.")
         with self._lock:
-            fresh = time.monotonic() - self._fetched_monotonic < CACHE_SECONDS
-            if (
-                self._events is not None
-                and fresh
-                and self._url_token == moodle.moodle4_token
-            ):
-                return self._events, self._fetched_at
+            cache = self._caches.setdefault(token, _UserCache())
 
-            url = self._get_export_url()
+        with cache.lock:
+            fresh = time.monotonic() - cache.fetched_monotonic < CACHE_SECONDS
+            if cache.events is not None and fresh:
+                return cache.events, cache.fetched_at
+
+            url = self._get_export_url(token, cache)
             try:
                 resp = requests.get(url, timeout=30)
             except requests.RequestException as error:
                 raise MoodleUnavailable(f"Couldn't download the Moodle calendar: {error}")
             if resp.status_code != 200 or "BEGIN:VCALENDAR" not in resp.text:
                 # The auth token may have been reset; make a new URL next time.
-                self._export_url = None
+                cache.export_url = None
                 raise MoodleUnavailable(
                     f"Moodle calendar export returned status {resp.status_code}"
                 )
 
-            self._events = parse_moodle_ics(resp.text)
-            self._fetched_at = datetime.now(timezone.utc)
-            self._fetched_monotonic = time.monotonic()
-            return self._events, self._fetched_at
+            cache.events = parse_moodle_ics(resp.text)
+            cache.fetched_at = datetime.now(timezone.utc)
+            cache.fetched_monotonic = time.monotonic()
+            return cache.events, cache.fetched_at
 
-    def _get_export_url(self) -> str:
-        token = moodle.moodle4_token
-        if self._export_url and self._url_token == token:
-            return self._export_url
+    def forget(self, token: str | None) -> None:
+        """Drops a user's cached events, e.g. when they sign out."""
+        if token:
+            with self._lock:
+                self._caches.pop(token, None)
 
-        if not token or not moodle.LoginRequest().is_authorized():
-            raise MoodleNotAuthorized("Log in to Moodle first.")
+    def _get_export_url(self, token: str, cache: _UserCache) -> str:
+        if cache.export_url:
+            return cache.export_url
 
         try:
-            page = moodle.AuthRequest("/calendar/export.php").get()
+            if not moodle.is_authorized(token):
+                raise MoodleNotAuthorized("Log in to Moodle first.")
+            page = moodle.AuthRequest("/calendar/export.php", token).get()
             sesskey = moodle.get_config(page.text)["sesskey"]
-            url = moodle.GetScheduleUrl().get_calendar_url(sesskey)
-        except (requests.RequestException, ValueError, KeyError, AttributeError) as error:
+            url = moodle.GetScheduleUrl(token).get_calendar_url(sesskey)
+        except (requests.RequestException, ValueError, KeyError) as error:
             logger.warning("Couldn't get the Moodle export URL: %s", error)
             raise MoodleUnavailable("Couldn't get the calendar export link from Moodle.")
-        if not url:
-            raise MoodleUnavailable("Moodle didn't return a calendar export link.")
 
-        self._export_url = url
-        self._url_token = token
+        cache.export_url = url
         return url

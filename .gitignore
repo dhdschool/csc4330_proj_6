@@ -1,1 +1,4 @@
+# Live Moodle session cookies; never commit these.
 moodle.env
+moodle_sessions.json
+moodle_sessions.json.tmp

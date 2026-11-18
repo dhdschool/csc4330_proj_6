@@ -269,7 +269,7 @@ class _LocationSection extends StatelessWidget {
                 icon: const Icon(Icons.directions),
                 label: const Text('Directions'),
               ),
-            if (event.url != null)
+            if (event.tigerLinkUri != null)
               OutlinedButton.icon(
                 onPressed: () => openOnTigerLink(event),
                 icon: const Icon(Icons.open_in_new),

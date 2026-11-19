@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -183,8 +183,16 @@ async def get_club_events(
     except TigerLinkUnavailable as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 
+    def last_day(event: ClubEvent) -> date:
+        if event.end is None:
+            return event.start.date()
+        if event.all_day:
+            # iCalendar all-day DTEND is exclusive: the event ends the day before.
+            return max(event.start.date(), (event.end - timedelta(days=1)).date())
+        return event.end.date()
+
     def matches(event: ClubEvent) -> bool:
-        if start is not None and (event.end or event.start).date() < start:
+        if start is not None and last_day(event) < start:
             return False
         if end is not None and event.start.date() > end:
             return False

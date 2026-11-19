@@ -81,11 +81,172 @@ class _ClubsViewState extends State<ClubsView> {
   }
 
   Widget _buildContent(BuildContext context) {
-    final theme = Theme.of(context);
     final events = _visible;
-    final types = widget.data.eventTypes;
     final followCount = widget.followStore.clubs.length;
+    return Column(
+      children: [
+        _buildToolbar(followCount),
+        _buildSearchField(),
+        _buildTypeChips(widget.data.eventTypes),
+        _buildCount(context, events.length),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: widget.onRefresh,
+            child: _buildBody(context, events, followCount),
+          ),
+        ),
+      ],
+    );
+  }
 
+  /// Following / All, the map toggle, and the club picker button.
+  Widget _buildToolbar(int followCount) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(
+                    followCount == 0 ? 'Following' : 'Following ($followCount)',
+                  ),
+                  icon: const Icon(Icons.star, size: 18),
+                ),
+                const ButtonSegment(
+                  value: true,
+                  label: Text('All'),
+                  icon: Icon(Icons.public, size: 18),
+                ),
+              ],
+              selected: {_showAll},
+              onSelectionChanged: (s) => setState(() => _showAll = s.first),
+            ),
+          ),
+          IconButton(
+            tooltip: _mapMode ? 'Show list' : 'Show map',
+            onPressed: () => setState(() => _mapMode = !_mapMode),
+            icon: Icon(_mapMode ? Icons.view_list : Icons.map_outlined),
+          ),
+          IconButton(
+            tooltip: 'Follow clubs',
+            onPressed: _openClubPicker,
+            icon: const Icon(Icons.group_add_outlined),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _search = value),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'Search events or clubs',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _search.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => setState(() {
+                    _search = '';
+                    _searchController.clear();
+                  }),
+                ),
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  /// A scrolling row of event-type filters, starting with "All".
+  Widget _buildTypeChips(List<String> types) {
+    Widget chip(String label, bool selected, ValueChanged<bool> onSelected) =>
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: FilterChip(
+            label: Text(label),
+            selected: selected,
+            onSelected: onSelected,
+          ),
+        );
+
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        children: [
+          chip('All', _type == null, (_) => setState(() => _type = null)),
+          for (final type in types)
+            chip(
+              type,
+              _type == type,
+              (selected) => setState(() => _type = selected ? type : null),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCount(BuildContext context, int count) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          '$count upcoming',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The empty state, the map, or the day-grouped list.
+  Widget _buildBody(
+    BuildContext context,
+    List<ClubEvent> events,
+    int followCount,
+  ) {
+    if (events.isEmpty) {
+      return _EmptyState(
+        showAll: _showAll,
+        following: followCount > 0,
+        onBrowse: () => setState(() => _showAll = true),
+        onPickClubs: _openClubPicker,
+      );
+    }
+    if (_mapMode) {
+      return ClubsMapView(
+        events: events,
+        onEventTap: (event) => showClubEventDetails(context, event),
+      );
+    }
+    final rows = _buildRows(events);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 16),
+          itemCount: rows.length,
+          itemBuilder: (context, index) => rows[index],
+        ),
+      ),
+    );
+  }
+
+  /// Event tiles, with a header before each new day.
+  List<Widget> _buildRows(List<ClubEvent> events) {
     final rows = <Widget>[];
     DateTime? currentDay;
     for (final event in events) {
@@ -109,139 +270,7 @@ class _ClubsViewState extends State<ClubsView> {
         ),
       );
     }
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: SegmentedButton<bool>(
-                  segments: [
-                    ButtonSegment(
-                      value: false,
-                      label: Text(
-                        followCount == 0
-                            ? 'Following'
-                            : 'Following ($followCount)',
-                      ),
-                      icon: const Icon(Icons.star, size: 18),
-                    ),
-                    const ButtonSegment(
-                      value: true,
-                      label: Text('All'),
-                      icon: Icon(Icons.public, size: 18),
-                    ),
-                  ],
-                  selected: {_showAll},
-                  onSelectionChanged: (s) => setState(() => _showAll = s.first),
-                ),
-              ),
-              IconButton(
-                tooltip: _mapMode ? 'Show list' : 'Show map',
-                onPressed: () => setState(() => _mapMode = !_mapMode),
-                icon: Icon(_mapMode ? Icons.view_list : Icons.map_outlined),
-              ),
-              IconButton(
-                tooltip: 'Follow clubs',
-                onPressed: _openClubPicker,
-                icon: const Icon(Icons.group_add_outlined),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() => _search = value),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Search events or clubs',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _search.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () => setState(() {
-                        _search = '';
-                        _searchController.clear();
-                      }),
-                    ),
-              border: const OutlineInputBorder(),
-            ),
-          ),
-        ),
-        SizedBox(
-          height: 48,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: const Text('All'),
-                  selected: _type == null,
-                  onSelected: (_) => setState(() => _type = null),
-                ),
-              ),
-              for (final type in types)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(type),
-                    selected: _type == type,
-                    onSelected: (selected) =>
-                        setState(() => _type = selected ? type : null),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${events.length} upcoming',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: widget.onRefresh,
-            child: events.isEmpty
-                ? _EmptyState(
-                    showAll: _showAll,
-                    following: followCount > 0,
-                    onBrowse: () => setState(() => _showAll = true),
-                    onPickClubs: _openClubPicker,
-                  )
-                : _mapMode
-                ? ClubsMapView(
-                    events: events,
-                    onEventTap: (event) => showClubEventDetails(context, event),
-                  )
-                : Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: rows.length,
-                        itemBuilder: (context, index) => rows[index],
-                      ),
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
+    return rows;
   }
 }
 

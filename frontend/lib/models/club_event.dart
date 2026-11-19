@@ -91,6 +91,19 @@ class ClubEvent {
 
   /// Whether the event can be pinned on the map.
   bool get hasCoordinates => latitude != null && longitude != null;
+
+  /// The event's TigerLink page, if [url] is an https link to TigerLink (or
+  /// the CampusGroups servers behind it). Anything else from the feed is
+  /// ignored rather than opened.
+  Uri? get tigerLinkUri {
+    final uri = Uri.tryParse(url ?? '');
+    if (uri == null || uri.scheme != 'https') return null;
+    const trustedHosts = ['tigerlink.lsu.edu', 'campusgroups.com'];
+    final trusted = trustedHosts.any(
+      (host) => uri.host == host || uri.host.endsWith('.$host'),
+    );
+    return trusted ? uri : null;
+  }
 }
 
 class ClubEventsData {

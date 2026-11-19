@@ -15,8 +15,13 @@ Future<void> main() async {
   String baseUrl = defaultBackendUrl();
   // One CalendarApi serves both the academic calendar and TigerLink club events.
   final api = CalendarApi(client: client, baseUrl: baseUrl);
-  // Moodle loads moodle related api services
-  final moodle = MoodleService(client: client, baseUrl: baseUrl);
+  // Moodle sign-in; the session ID is kept on the device so reopening the app
+  // stays signed in.
+  final moodle = MoodleService(
+    client: client,
+    baseUrl: baseUrl,
+    sessionStore: PrefsMoodleSessionStore(),
+  );
   // Load the user's followed clubs from device storage.
   final follows = await PrefsFollowStore.create();
   runApp(

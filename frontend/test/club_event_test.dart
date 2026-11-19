@@ -67,4 +67,33 @@ void main() {
       expect(event.end, DateTime.utc(2026, 11, 12, 4).toLocal());
     }
   });
+
+  group('tigerLinkUri only allows https links to TigerLink', () {
+    ClubEvent withUrl(String? url) =>
+        ClubEvent(id: 'x', title: 'x', start: DateTime(2026, 11, 20), url: url);
+
+    for (final url in [
+      'https://tigerlink.lsu.edu/rsvp?id=2277027',
+      'https://static-prod-us-east-1.campusgroups.com/event/1',
+    ]) {
+      test('accepts $url', () {
+        expect(withUrl(url).tigerLinkUri, Uri.parse(url));
+      });
+    }
+
+    for (final url in [
+      null,
+      '',
+      'http://tigerlink.lsu.edu/rsvp?id=1', // not https
+      'https://evil.example/tigerlink.lsu.edu',
+      'https://tigerlink.lsu.edu.evil.example/',
+      'https://notcampusgroups.com/',
+      'intent://scan#Intent;end',
+      'javascript:alert(1)',
+    ]) {
+      test('rejects $url', () {
+        expect(withUrl(url).tigerLinkUri, isNull);
+      });
+    }
+  });
 }

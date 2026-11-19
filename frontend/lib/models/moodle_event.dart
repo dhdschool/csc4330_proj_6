@@ -3,12 +3,17 @@ import 'calendar_event.dart';
 class LoginResponse {
   final bool success;
 
+  /// The backend's ID for this sign-in, sent back with every Moodle request.
+  final String? session;
+
   const LoginResponse({
-    required this.success
+    required this.success,
+    this.session,
   });
 
   factory fromJson(Map<String, dynamic> json) => LoginResponse(
-    success: json['success'] as bool
+    success: json['success'] as bool,
+    session: json['session'] as String?,
   );
 }
 

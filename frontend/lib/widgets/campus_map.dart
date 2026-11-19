@@ -73,7 +73,10 @@ Future<void> openDirections(ClubEvent event) {
 }
 
 /// Opens the event's TigerLink page.
-Future<void> openOnTigerLink(ClubEvent event) => _open(Uri.parse(event.url!));
+Future<void> openOnTigerLink(ClubEvent event) async {
+  final uri = event.tigerLinkUri;
+  if (uri != null) await _open(uri);
+}
 
 /// A pin in LSU purple, optionally with a count of events at that spot.
 class _Pin extends StatelessWidget {

@@ -79,3 +79,32 @@ def test_unavailable_returns_503(client):
     response = client.get(URL)
     assert response.status_code == 503
     assert response.json()["detail"] == "TigerLink is down"
+
+
+ALL_DAY_FEED = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:all-day-1
+SUMMARY:Club Fair
+DTSTART;VALUE=DATE:20261118
+DTEND;VALUE=DATE:20261119
+END:VEVENT
+END:VCALENDAR
+"""
+
+
+def test_all_day_event_does_not_leak_into_the_next_day():
+    # An all-day DTEND is exclusive, so a Nov 18 event must not match Nov 19.
+    service = FakeService()
+    service.snapshot = ClubEventSnapshot(
+        parse_feed(ALL_DAY_FEED), datetime(2026, 11, 6, tzinfo=timezone.utc), stale=False
+    )
+    app.dependency_overrides[get_tigerlink_service] = lambda: service
+    try:
+        client = TestClient(app)
+        titles = lambda params: [e["title"] for e in client.get(URL, params=params).json()["events"]]
+        assert titles({"start": "2026-11-18"}) == ["Club Fair"]
+        assert titles({"start": "2026-11-18", "end": "2026-11-18"}) == ["Club Fair"]
+        assert titles({"start": "2026-11-19"}) == []
+    finally:
+        app.dependency_overrides.clear()

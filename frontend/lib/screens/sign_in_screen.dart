@@ -67,6 +67,15 @@ class _SignInScreenState extends State<SignInScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(
+                    child: Image.asset(
+                      'assets/logo/logo.png',
+                      height: 160,
+                      // The title below already names the app.
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     'LSU CALENDAR',
                     textAlign: TextAlign.center,

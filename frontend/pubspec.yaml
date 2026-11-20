@@ -54,6 +54,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   webview_flutter_web: ^0.2.3+4
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -81,10 +82,10 @@ flutter:
         - asset: assets/fonts/Montserrat-ExtraBold.ttf
           weight: 800
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  # The app logo, shown on the sign-in screen and in the app bar. Its source
+  # is assets/logo/logo.svg.
+  assets:
+    - assets/logo/logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -111,3 +112,25 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App icons for every platform, generated from the logo. After changing
+# assets/logo/logo.svg, re-render the PNGs and run:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/logo/app_icon.png
+  android: true
+  # Android crops icons to a circle or rounded square, so it gets just the
+  # calendar page (no square tile) on the tile's lavender.
+  adaptive_icon_background: "#ECE3F8"
+  adaptive_icon_foreground: assets/logo/app_icon_foreground.png
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    background_color: "#FFFFFF"
+    theme_color: "#461D7C"
+  windows:
+    generate: true
+    icon_size: 256
+  macos:
+    generate: true

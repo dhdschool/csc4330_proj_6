@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- LSU Calendar logo: a hand-drawn tile with a calendar page, in LSU
+       purple (#461D7C) and gold (#FDD023). Source for the PNGs next to it;
+       edit this and re-render rather than editing the PNGs. -->
+  <defs>
+    <!-- Wobbles straight edges so they look brushed on, like a marker. -->
+    <filter id="brush" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="16" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="sketch" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="2" seed="3" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <path id="star" d="M0,-1 L0.2245,-0.309 L0.951,-0.309 L0.363,0.118 L0.588,0.809 L0,0.382 L-0.588,0.809 L-0.363,0.118 L-0.951,-0.309 L-0.2245,-0.309 Z"/>
+    <clipPath id="page">
+      <rect x="340" y="352" width="344" height="328" rx="40"/>
+    </clipPath>
+  </defs>
+
+  <!-- Tile: soft lavender fill with a rough purple brush border. The Android
+       icon leaves out the tile and stars (class names below), since Android
+       crops icons to a circle and puts them on a lavender background. -->
+  <g class="tile">
+  <rect x="170" y="170" width="684" height="684" rx="150" fill="#ECE3F8" filter="url(#sketch)"/>
+  <rect x="170" y="170" width="684" height="684" rx="150" fill="none"
+        stroke="#461D7C" stroke-width="46" stroke-linejoin="round" filter="url(#brush)"/>
+  <rect x="160" y="182" width="700" height="676" rx="160" fill="none"
+        stroke="#461D7C" stroke-width="10" stroke-opacity="0.55" filter="url(#brush)"/>
+  <!-- Broken strands along the inside edge, like a dry brush. -->
+  <rect x="204" y="200" width="618" height="624" rx="122" fill="none"
+        stroke="#461D7C" stroke-width="7" stroke-opacity="0.5" stroke-linecap="round"
+        stroke-dasharray="90 30 160 22 60 40" filter="url(#brush)"/>
+  <rect x="146" y="150" width="732" height="728" rx="176" fill="none"
+        stroke="#461D7C" stroke-width="5" stroke-opacity="0.4" stroke-linecap="round"
+        stroke-dasharray="40 70 120 50" filter="url(#brush)"/>
+  </g>
+
+  <!-- Calendar page, with a white "sticker" edge around it. -->
+  <rect x="316" y="328" width="392" height="376" rx="62" fill="#FFFFFF"/>
+  <g filter="url(#sketch)">
+    <rect x="340" y="352" width="344" height="328" rx="40" fill="#FFFFFF"/>
+    <rect x="340" y="352" width="344" height="86" fill="#FDD023" clip-path="url(#page)"/>
+    <line x1="340" y1="438" x2="684" y2="438" stroke="#461D7C" stroke-width="18"/>
+    <rect x="340" y="352" width="344" height="328" rx="40" fill="none"
+          stroke="#461D7C" stroke-width="24"/>
+
+    <!-- Binder rings. -->
+    <rect x="410" y="298" width="40" height="100" rx="20" fill="#FFFFFF" stroke="#461D7C" stroke-width="18"/>
+    <rect x="574" y="298" width="40" height="100" rx="20" fill="#FFFFFF" stroke="#461D7C" stroke-width="18"/>
+
+    <!-- The date. -->
+    <text x="436" y="626" text-anchor="middle" fill="#461D7C"
+          font-family="'Arial Rounded MT Bold', 'Segoe UI Black', 'Arial Black', sans-serif"
+          font-weight="900" font-size="164" letter-spacing="-6">15</text>
+
+    <!-- Month grid, with today's square in gold. -->
+    <rect x="566" y="526" width="34" height="34" fill="#FDD023"/>
+    <g fill="none" stroke="#461D7C" stroke-linecap="round">
+      <rect x="532" y="492" width="102" height="136" rx="6" stroke-width="13"/>
+      <line x1="566" y1="492" x2="566" y2="628" stroke-width="9"/>
+      <line x1="600" y1="492" x2="600" y2="628" stroke-width="9"/>
+      <line x1="532" y1="526" x2="634" y2="526" stroke-width="9"/>
+      <line x1="532" y1="560" x2="634" y2="560" stroke-width="9"/>
+      <line x1="532" y1="594" x2="634" y2="594" stroke-width="9"/>
+    </g>
+  </g>
+
+  <!-- Stars, softened with round joins. A white outline behind each keeps it
+       readable where it overlaps the purple border. -->
+  <g class="stars">
+  <g stroke="#FFFFFF" fill="#FFFFFF" stroke-linejoin="round">
+    <use href="#star" transform="translate(178 160) rotate(-14) scale(72)" stroke-width="0.55"/>
+    <use href="#star" transform="translate(814 286) rotate(10) scale(56)" stroke-width="0.6"/>
+    <use href="#star" transform="translate(864 878) rotate(-8) scale(46)" stroke-width="0.6"/>
+  </g>
+  <use href="#star" transform="translate(178 160) rotate(-14) scale(72)"
+       fill="#FDD023" stroke="#FDD023" stroke-width="0.22" stroke-linejoin="round"/>
+  <use href="#star" transform="translate(814 286) rotate(10) scale(56)"
+       fill="#461D7C" stroke="#461D7C" stroke-width="0.22" stroke-linejoin="round"/>
+  <use href="#star" transform="translate(864 878) rotate(-8) scale(46)"
+       fill="#FDD023" stroke="#FDD023" stroke-width="0.22" stroke-linejoin="round"/>
+  </g>
+</svg>

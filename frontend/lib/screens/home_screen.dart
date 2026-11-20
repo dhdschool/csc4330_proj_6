@@ -295,7 +295,23 @@ class _HomeScreenState extends State<HomeScreen> {
       // A single purple bar naming the screen. Text only: LSU allows icons
       // for utility, never as a logo.
       appBar: AppBar(
-        title: Text(_screenTitles[_tab].toUpperCase()),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/logo/logo.png',
+              height: 36,
+              semanticLabel: 'LSU Calendar',
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                _screenTitles[_tab].toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           // The category filter only applies to the academic calendar tabs.
           if (_tab == 0 || _tab == 1)

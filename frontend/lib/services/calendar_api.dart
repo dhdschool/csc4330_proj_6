@@ -32,6 +32,9 @@ abstract interface class CalendarRepository {
 
 abstract interface class ClubRepository {
   Future<ClubEventsData> fetchClubEvents();
+
+  /// The events in a student's personal TigerLink calendar link.
+  Future<ClubEventsData> fetchPersonalClubEvents(String feedUrl);
 }
 
 class CalendarApi implements CalendarRepository, ClubRepository {
@@ -100,6 +103,44 @@ class CalendarApi implements CalendarRepository, ClubRepository {
     if (response.statusCode != 200) {
       throw CalendarApiException(
         'The calendar server returned an error (${response.statusCode}).',
+      );
+    }
+    return ClubEventsData.fromJson(
+      jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>,
+    );
+  }
+
+  /// Loads a personal TigerLink calendar through the backend. The link goes
+  /// in the request body, not the URL, so it stays out of server logs.
+  @override
+  Future<ClubEventsData> fetchPersonalClubEvents(String feedUrl) async {
+    final http.Response response;
+    try {
+      response = await _client
+          .post(
+            Uri.parse('$baseUrl/api/tigerlink/personal'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'feed_url': feedUrl}),
+          )
+          .timeout(const Duration(seconds: 30));
+    } on Exception {
+      throw CalendarApiException(
+        "Couldn't reach the calendar server at $baseUrl.",
+      );
+    }
+    if (response.statusCode != 200) {
+      // The backend explains what went wrong, e.g. "That isn't a TigerLink
+      // calendar link."
+      String? detail;
+      try {
+        detail =
+            (jsonDecode(utf8.decode(response.bodyBytes)) as Map)['detail']
+                as String?;
+      } on Object {
+        detail = null;
+      }
+      throw CalendarApiException(
+        detail ?? "Couldn't load your TigerLink calendar (${response.statusCode}).",
       );
     }
     return ClubEventsData.fromJson(

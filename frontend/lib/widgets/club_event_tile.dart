@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/club_event.dart';
+import '../services/followed_clubs.dart';
 import '../utils/date_format.dart';
 import '../theme.dart';
 import 'campus_map.dart';
@@ -187,6 +189,8 @@ class _ClubEventDetails extends StatelessWidget {
               if (event.club != null)
                 _DetailRow(icon: Icons.groups, text: event.club!),
               _LocationSection(event: event),
+              const SizedBox(height: 16),
+              _RegisterSection(event: event),
               if (event.description != null) ...[
                 const SizedBox(height: 16),
                 Text(event.description!, style: theme.textTheme.bodyMedium),
@@ -289,6 +293,61 @@ class _LocationSection extends StatelessWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Register (or "I'm going") puts the event on the user's calendar; for
+/// TigerLink events it also opens the event's page to sign up. TigerLink
+/// doesn't share registrations with other apps, so this is how the app
+/// learns about them.
+class _RegisterSection extends StatelessWidget {
+  const _RegisterSection({required this.event});
+
+  final ClubEvent event;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final going = context.watch<GoingStore>();
+    final isGoing = going.isGoing(event.id);
+    final canRegister = event.tigerLinkUri != null;
+
+    if (isGoing) {
+      return Row(
+        children: [
+          Icon(Icons.check_circle, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          const Expanded(child: Text("You're going · on your calendar")),
+          TextButton(
+            onPressed: () => going.setGoing(event.id, false),
+            child: const Text('Remove'),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FilledButton.icon(
+          onPressed: () async {
+            await going.setGoing(event.id, true);
+            if (canRegister) await openOnTigerLink(event);
+          },
+          icon: const Icon(Icons.how_to_reg),
+          label: Text(canRegister ? 'Register' : "I'm going"),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          canRegister
+              ? 'Opens TigerLink to sign up, and adds this event to your '
+                    'calendar.'
+              : 'Adds this event to your calendar.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }

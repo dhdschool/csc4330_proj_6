@@ -69,7 +69,17 @@ For the map, each event also has:
 - `venue`: the location without the default "Campus Life, 358J LSU Student Union" address TigerLink appends to most campus locations, e.g. `167 Coates Hall`. Use this for display.
 - `place`, `latitude`, `longitude`: the campus building the venue matched, from the table in `campus_places.py`. They're `null` for off-campus addresses, online or TBD events, and buildings the table doesn't cover (such as White Hall, which isn't in OpenStreetMap).
 
+### `POST /api/tigerlink/personal`
+
+Returns the events in a student's personal TigerLink calendar (their "Personal Feed of Events" from [tigerlink.lsu.edu/ics_helper](https://tigerlink.lsu.edu/ics_helper), which holds events they star). The body is `{"feed_url": "https://tigerlink.lsu.edu/..."}`. The link works like a password to that calendar, so it goes in the body rather than the URL and is never stored or logged. Only `https` links to `tigerlink.lsu.edu` or `campusgroups.com` are fetched, and redirects are checked the same way (400 otherwise). The response matches `GET /api/tigerlink/events`.
+
 ## Frontend
+
+Club events show up on the Calendar and Agenda tabs, under a "Clubs" category you can filter out, when they come from:
+
+- clubs you follow;
+- events you tapped **Register** (or **I'm going**) on, which also opens the event's TigerLink page to sign up. TigerLink doesn't share registrations with other apps, so this is how the app knows;
+- your personal TigerLink calendar link, pasted under the account menu's **TigerLink calendar link**. Events you star on TigerLink then appear automatically.
 
 A Flutter app with three tabs: a month view of the LSU academic calendar, an agenda with a banner counting down to the next break, and a Clubs tab for TigerLink events. The Clubs tab shows events from clubs you follow by default, with an "All" view, search and type filters. Followed clubs are saved on the device with `shared_preferences`; there's no account, since TigerLink memberships aren't available without LSU's authorized API. Start the backend first, then from the `frontend` folder:
 

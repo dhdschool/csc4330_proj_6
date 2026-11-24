@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme.dart';
+import 'club_event.dart';
 
 /// Mirrors the `category` values the backend returns.
 enum EventCategory {
@@ -15,6 +16,9 @@ enum EventCategory {
   commencement('Commencement', Icons.celebration, Color(0xFFD81B60)),
   // Due dates and sessions from the user's own Moodle courses.
   moodle('Moodle', Icons.assignment_outlined, Color(0xFFF98012)),
+  // TigerLink events from followed clubs, events marked "Going", and the
+  // user's personal TigerLink calendar.
+  club('Clubs', Icons.groups, Color(0xFF00838F)),
   other('Other', Icons.event, Color(0xFF757575));
 
   const EventCategory(this.label, this.icon, this.color);
@@ -54,7 +58,34 @@ class CalendarEvent {
     this.classesResumeAt,
     this.startTime,
     this.endTime,
+    this.clubEvent,
   });
+
+  /// Shapes a TigerLink event like an academic calendar entry, so the
+  /// calendar and agenda can show both. Keeps the original in [clubEvent] so
+  /// tapping it opens the club event's own details (map, Register, etc.).
+  factory CalendarEvent.fromClubEvent(ClubEvent event) {
+    String hhmm(DateTime time) =>
+        '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
+    final end = event.end;
+    final sameDayEnd =
+        end != null && end.isAfter(event.start) && event.lastDay == event.day;
+    return CalendarEvent(
+      id: 'club-${event.id}',
+      title: event.title,
+      description: event.description,
+      category: EventCategory.club,
+      startDate: event.day,
+      endDate: event.lastDay,
+      dateText: '',
+      terms: [?event.club],
+      academicYear: '',
+      startTime: event.allDay ? null : hhmm(event.start),
+      endTime: event.allDay || !sameDayEnd ? null : hhmm(end),
+      clubEvent: event,
+    );
+  }
 
   factory CalendarEvent.fromJson(Map<String, dynamic> json) => CalendarEvent(
     id: json['id'] as String,
@@ -94,6 +125,9 @@ class CalendarEvent {
   /// (Moodle deadlines and sessions). Null for all-day events.
   final String? startTime;
   final String? endTime;
+
+  /// The TigerLink event this entry came from, for club events.
+  final ClubEvent? clubEvent;
 
   bool get isScheduled => startDate != null;
 

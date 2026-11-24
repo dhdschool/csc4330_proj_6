@@ -100,6 +100,7 @@ class _FakeApi implements CalendarRepository, ClubRepository {
 
   Future<ClubEventsData> Function()? clubResult;
   int clubCalls = 0;
+  final personalFeedUrls = <String>[];
 
   @override
   Future<CalendarData> fetchCalendar() async =>
@@ -110,12 +111,32 @@ class _FakeApi implements CalendarRepository, ClubRepository {
     clubCalls++;
     return (clubResult ?? () async => ClubEventsData.fromJson(_clubJson))();
   }
+
+  /// A personal TigerLink calendar holding one starred event.
+  @override
+  Future<ClubEventsData> fetchPersonalClubEvents(String feedUrl) async {
+    personalFeedUrls.add(feedUrl);
+    return ClubEventsData.fromJson({
+      ..._clubJson,
+      'events': [
+        _clubEvent(
+          'p1',
+          'Starred Workshop',
+          'Workshop',
+          '2026-11-11T18:00:00Z',
+          club: 'Robotics Club',
+        ),
+      ],
+    });
+  }
 }
 
 Future<_FakeApi> _pump(
   WidgetTester tester, {
   _FakeApi? api,
   FollowStore? follows,
+  GoingStore? going,
+  PersonalFeedStore? personalFeed,
 }) async {
   final fake = api ?? _FakeApi();
   await tester.pumpWidget(
@@ -124,6 +145,8 @@ Future<_FakeApi> _pump(
       clubRepository: fake,
       moodleService: fakeMoodleService(),
       followStore: follows ?? MemoryFollowStore(),
+      goingStore: going,
+      personalFeedStore: personalFeed,
       clock: () => DateTime(2026, 11, 6, 9),
     ),
   );
@@ -325,6 +348,98 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Friday, November 6, 2026'), findsOneWidget);
     expect(find.text('All day'), findsOneWidget);
+  });
+
+  group('club events on the calendar', () {
+    Future<void> openAgenda(WidgetTester tester) async {
+      await tester.tap(find.text('Agenda'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('followed clubs show up in the agenda', (tester) async {
+      final api = await _pump(
+        tester,
+        follows: MemoryFollowStore(['Chess Club']),
+      );
+      // Loaded at startup, without opening the Clubs tab.
+      expect(api.clubCalls, 1);
+
+      await openAgenda(tester);
+      expect(find.text('Chess Club Meeting'), findsOneWidget);
+      expect(find.text('Food Drive'), findsNothing); // not followed
+    });
+
+    testWidgets('events marked Going show up even from other clubs', (
+      tester,
+    ) async {
+      await _pump(tester, going: MemoryGoingStore(['2']));
+      await openAgenda(tester);
+      expect(find.text('Food Drive'), findsOneWidget);
+    });
+
+    testWidgets("tapping I'm going puts the event on the calendar", (
+      tester,
+    ) async {
+      final going = MemoryGoingStore();
+      await _pump(tester, going: going);
+      await _openClubs(tester);
+      await _browseAll(tester);
+
+      // Food Drive has no TigerLink page, so it's "I'm going", not Register.
+      await tester.tap(find.text('Food Drive'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("I'm going"));
+      await tester.pumpAndSettle();
+      expect(going.ids, {'2'});
+      expect(find.text("You're going · on your calendar"), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10)); // close the sheet
+      await tester.pumpAndSettle();
+      await openAgenda(tester);
+      expect(find.text('Food Drive'), findsOneWidget);
+    });
+
+    testWidgets('a club event on the calendar opens its club details', (
+      tester,
+    ) async {
+      await _pump(tester, follows: MemoryFollowStore(['Chess Club']));
+      await openAgenda(tester);
+
+      await tester.tap(find.text('Chess Club Meeting'));
+      await tester.pumpAndSettle();
+      // The club sheet, with its map and Register/Going section.
+      expect(find.byType(EventMapPreview), findsOneWidget);
+      expect(find.text("I'm going"), findsOneWidget);
+    });
+
+    testWidgets('a personal TigerLink link adds its events', (tester) async {
+      const link = 'https://tigerlink.lsu.edu/ical/lsu/personal.ics';
+      final api = await _pump(
+        tester,
+        personalFeed: MemoryPersonalFeedStore(link),
+      );
+      expect(api.personalFeedUrls, [link]);
+
+      await openAgenda(tester);
+      expect(find.text('Starred Workshop'), findsOneWidget);
+    });
+
+    testWidgets('the Clubs category filter hides club events', (
+      tester,
+    ) async {
+      await _pump(tester, follows: MemoryFollowStore(['Chess Club']));
+      await openAgenda(tester);
+      expect(find.text('Chess Club Meeting'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Filter categories'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, 'Clubs'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chess Club Meeting'), findsNothing);
+    });
   });
 
   testWidgets('clubs load lazily and prompt to follow when none are followed', (

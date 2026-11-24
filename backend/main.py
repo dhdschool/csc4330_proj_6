@@ -16,11 +16,16 @@ from lsu_calendar import (
     INDEX_URL,
     LsuCalendarService,
 )
+import httpx
+
 from tigerlink import (
     ClubEvent,
     SOURCE_URL as TIGERLINK_SOURCE_URL,
+    TigerLinkParseError,
     TigerLinkService,
     TigerLinkUnavailable,
+    UntrustedFeedUrl,
+    fetch_personal_feed,
 )
 
 import moodle
@@ -336,4 +341,46 @@ async def get_club_events(
         source=TIGERLINK_SOURCE_URL,
         fetched_at=snapshot.fetched_at,
         stale=snapshot.stale,
+    )
+
+
+class PersonalFeedBody(BaseModel):
+    # A student's personal TigerLink calendar link. It works like a password
+    # to their calendar, so it's sent in the body (not the URL, which ends up
+    # in access logs) and never stored or logged.
+    feed_url: str
+
+
+def get_personal_feed_fetcher():
+    """Downloads a personal feed. Tests swap in a fake."""
+    return fetch_personal_feed
+
+
+@app.post("/api/tigerlink/personal")
+async def get_personal_club_events(
+    body: PersonalFeedBody,
+    fetch: Annotated[object, Depends(get_personal_feed_fetcher)],
+) -> ClubEventsResponse:
+    """The events in a student's personal TigerLink calendar (starred events)."""
+    try:
+        events = await fetch(body.feed_url)
+    except UntrustedFeedUrl as error:
+        raise HTTPException(
+            status_code=400,
+            detail="That isn't a TigerLink calendar link. Copy it from "
+            "tigerlink.lsu.edu/ics_helper.",
+        ) from error
+    except TigerLinkParseError as error:
+        raise HTTPException(
+            status_code=422, detail="That link didn't return a calendar."
+        ) from error
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status_code=502, detail="Couldn't load your TigerLink calendar."
+        ) from error
+    return ClubEventsResponse(
+        events=events,
+        source=TIGERLINK_SOURCE_URL,
+        fetched_at=datetime.now().astimezone(),
+        stale=False,
     )

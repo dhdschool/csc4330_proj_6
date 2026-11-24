@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/models/calendar_event.dart';
+import 'package:frontend/models/club_event.dart';
 import 'package:frontend/services/calendar_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -166,6 +168,74 @@ void main() {
         api.fetchClubEvents(),
         throwsA(isA<CalendarApiException>()),
       );
+    });
+  });
+
+  group('fetchPersonalClubEvents', () {
+    const link = 'https://tigerlink.lsu.edu/ical/lsu/personal.ics';
+
+    test('sends the link in the body, not the URL', () async {
+      final (api, requests) = _api(200, _clubJson);
+      final data = await api.fetchPersonalClubEvents(link);
+
+      final request = requests.single;
+      expect(request.method, 'POST');
+      expect(request.url.path, '/api/tigerlink/personal');
+      expect(request.url.query, isEmpty); // kept out of server logs
+      expect(jsonDecode(request.body), {'feed_url': link});
+      expect(data.events.single.title, 'Chess Club Meeting');
+    });
+
+    test("shows the backend's explanation when the link is wrong", () async {
+      final (api, _) = _api(400, {
+        'detail': "That isn't a TigerLink calendar link.",
+      });
+      await expectLater(
+        api.fetchPersonalClubEvents('https://example.com'),
+        throwsA(
+          isA<CalendarApiException>().having(
+            (e) => e.message,
+            'message',
+            "That isn't a TigerLink calendar link.",
+          ),
+        ),
+      );
+    });
+  });
+
+  group('CalendarEvent.fromClubEvent', () {
+    test('keeps the club, day and time, and links back to the event', () {
+      final club = ClubEvent(
+        id: '7',
+        title: 'Robotics Night',
+        start: DateTime(2026, 11, 20, 18, 30),
+        end: DateTime(2026, 11, 20, 20),
+        club: 'Robotics Club',
+      );
+      final event = CalendarEvent.fromClubEvent(club);
+
+      expect(event.category, EventCategory.club);
+      expect(event.startDate, DateTime(2026, 11, 20));
+      expect(event.endDate, DateTime(2026, 11, 20));
+      expect(event.startTime, '18:30');
+      expect(event.endTime, '20:00');
+      expect(event.terms, ['Robotics Club']);
+      expect(event.clubEvent, same(club));
+    });
+
+    test('multi-day and all-day events have no clock times', () {
+      final retreat = CalendarEvent.fromClubEvent(
+        ClubEvent(
+          id: 'r',
+          title: 'Retreat',
+          start: DateTime(2026, 11, 20),
+          end: DateTime(2026, 11, 23), // exclusive: ends on the 22nd
+          allDay: true,
+        ),
+      );
+      expect(retreat.endDate, DateTime(2026, 11, 22));
+      expect(retreat.startTime, isNull);
+      expect(retreat.endTime, isNull);
     });
   });
 

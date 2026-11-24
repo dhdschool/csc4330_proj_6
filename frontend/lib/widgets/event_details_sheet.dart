@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import '../models/calendar_event.dart';
 import '../theme.dart';
 import '../utils/date_format.dart';
+import 'club_event_tile.dart';
 import 'event_tile.dart';
 
 Future<void> showEventDetails(BuildContext context, CalendarEvent event) {
+  // Club events on the calendar open their own details: map, directions,
+  // and the Register button.
+  if (event.clubEvent case final club?) {
+    return showClubEventDetails(context, club);
+  }
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,

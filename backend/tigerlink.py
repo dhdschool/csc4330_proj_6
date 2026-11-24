@@ -13,6 +13,7 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 from pydantic import BaseModel
@@ -61,6 +62,66 @@ class ClubEvent(BaseModel):
 
 class TigerLinkParseError(Exception):
     """The feed could not be parsed as iCalendar."""
+
+
+class UntrustedFeedUrl(ValueError):
+    """A personal feed link that isn't an https TigerLink/CampusGroups URL."""
+
+
+# Personal feed links are only fetched from these hosts (and their
+# subdomains), so the endpoint can't be used to make the server request
+# arbitrary URLs.
+_TRUSTED_FEED_HOSTS = ("tigerlink.lsu.edu", "campusgroups.com")
+_MAX_FEED_BYTES = 10 * 1024 * 1024
+_MAX_REDIRECTS = 5
+
+
+def is_trusted_feed_url(url: str) -> bool:
+    """Whether a URL is an https link to TigerLink or CampusGroups."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return False
+    host = (parts.hostname or "").lower()
+    return (
+        parts.scheme == "https"
+        and parts.username is None
+        and parts.password is None
+        and port in (None, 443)
+        and any(host == h or host.endswith("." + h) for h in _TRUSTED_FEED_HOSTS)
+    )
+
+
+async def fetch_personal_feed(
+    url: str, transport: httpx.AsyncBaseTransport | None = None
+) -> list[ClubEvent]:
+    """Downloads and parses a student's personal TigerLink calendar link.
+
+    The link works like a password to their calendar, so it's never logged.
+    Redirects are followed only to trusted hosts. Raises UntrustedFeedUrl,
+    httpx.HTTPError, or TigerLinkParseError.
+    """
+    if not is_trusted_feed_url(url):
+        raise UntrustedFeedUrl("Not a TigerLink calendar link")
+    async with httpx.AsyncClient(
+        transport=transport,
+        headers={"User-Agent": USER_AGENT},
+        follow_redirects=False,
+        timeout=30,
+    ) as client:
+        for _ in range(_MAX_REDIRECTS + 1):
+            response = await client.get(url)
+            if response.is_redirect:
+                url = urljoin(str(response.url), response.headers.get("location", ""))
+                if not is_trusted_feed_url(url):
+                    raise UntrustedFeedUrl("Redirected away from TigerLink")
+                continue
+            response.raise_for_status()
+            if len(response.content) > _MAX_FEED_BYTES:
+                raise TigerLinkParseError("Calendar file is too large")
+            return parse_feed(response.text)
+    raise TigerLinkParseError("Too many redirects")
 
 
 class TigerLinkUnavailable(Exception):
